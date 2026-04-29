@@ -449,37 +449,51 @@ function startBreathingExercise() {
   container.innerHTML = `
     <div class="breathing-container">
       <div class="breath-circle" id="breathCircle">Bereit?</div>
-      <div class="breath-instruction" id="breathLabel">Atme tief ein...</div>
+      <div class="breath-instruction" id="breathLabel">Gleich geht's los...</div>
     </div>
   `;
   
   const circle = document.getElementById('breathCircle');
   const label = document.getElementById('breathLabel');
   let cycle = 0;
+  let timerInterval;
+
+  const updateCircle = (seconds, text, scale) => {
+    label.innerText = text;
+    circle.style.transform = `scale(${scale})`;
+    circle.innerText = seconds + "s";
+    
+    let currentSec = seconds;
+    if (timerInterval) clearInterval(timerInterval);
+    
+    timerInterval = setInterval(() => {
+      currentSec--;
+      if (currentSec > 0) {
+        circle.innerText = currentSec + "s";
+      } else {
+        clearInterval(timerInterval);
+      }
+    }, 1000);
+  };
   
   const runCycle = () => {
     if (cycle >= 3) {
-      clearInterval(interval);
+      clearInterval(mainInterval);
+      if (timerInterval) clearInterval(timerInterval);
       showMotivationScreen();
       return;
     }
     
     // Einatmen (4s)
-    label.innerText = "Einatmen...";
-    circle.style.transform = "scale(1.5)";
-    circle.innerText = "4s";
+    updateCircle(4, "Einatmen...", 1.5);
     
     setTimeout(() => {
       // Halten (4s)
-      label.innerText = "Halten...";
-      circle.style.transform = "scale(1.5)";
-      circle.innerText = "4s";
+      updateCircle(4, "Halten...", 1.5);
       
       setTimeout(() => {
         // Ausatmen (6s)
-        label.innerText = "Ausatmen...";
-        circle.style.transform = "scale(1.0)";
-        circle.innerText = "6s";
+        updateCircle(6, "Ausatmen...", 1.0);
         
         cycle++;
       }, 4000);
@@ -487,7 +501,7 @@ function startBreathingExercise() {
   };
   
   runCycle();
-  const interval = setInterval(runCycle, 14000);
+  const mainInterval = setInterval(runCycle, 14000);
 }
 
 function startBubbleGame() {
@@ -496,37 +510,63 @@ function startBubbleGame() {
   
   container.innerHTML = `
     <div class="bubble-game-view">
-      <h3 style="margin-bottom: 10px;">Blasen zerplatzen!</h3>
-      <div class="pop-counter">Noch <span id="popCount">10</span></div>
-      <div class="bubble-game-container" id="bubbleGameArea"></div>
+      <h3 style="margin-bottom: 5px;">Blasen zerplatzen!</h3>
+      <div style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 10px;">Beschäftige deine Finger für 30 Sekunden.</div>
+      <div class="pop-counter" style="position: static; text-align: center; font-size: 24px; color: var(--color-primary); margin-bottom: 10px;">
+        <span id="gameTimer">30</span>s
+      </div>
+      <div class="bubble-game-container" id="bubbleGameArea" style="height: 250px;"></div>
     </div>
   `;
   
   const area = document.getElementById('bubbleGameArea');
-  const countEl = document.getElementById('popCount');
-  let popped = 0;
-  const total = 10;
+  const timerEl = document.getElementById('gameTimer');
+  let timeLeft = 30;
+  let gameActive = true;
   
-  for (let i = 0; i < total; i++) {
+  const spawnBubble = () => {
+    if (!gameActive) return;
+    
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.style.left = Math.random() * 80 + 10 + '%';
-    bubble.style.top = Math.random() * 80 + 10 + '%';
-    bubble.style.animationDelay = Math.random() * 2 + 's';
+    bubble.style.left = Math.random() * 85 + 5 + '%';
+    bubble.style.top = Math.random() * 85 + 5 + '%';
     
     bubble.addEventListener('click', () => {
       if (!bubble.classList.contains('popped')) {
         bubble.classList.add('popped');
-        popped++;
-        countEl.innerText = total - popped;
-        if (popped === total) {
-          setTimeout(showMotivationScreen, 500);
-        }
+        setTimeout(() => bubble.remove(), 200);
       }
     });
     
     area.appendChild(bubble);
-  }
+    
+    // Remove if not popped after 3s
+    setTimeout(() => {
+      if (bubble.parentNode === area) {
+        bubble.style.opacity = '0';
+        setTimeout(() => bubble.remove(), 200);
+      }
+    }, 3000);
+  };
+  
+  // Initial bubbles
+  for (let i = 0; i < 5; i++) spawnBubble();
+  
+  // Continuous spawning
+  const spawnInterval = setInterval(spawnBubble, 600);
+  
+  const countdown = setInterval(() => {
+    timeLeft--;
+    timerEl.innerText = timeLeft;
+    
+    if (timeLeft <= 0) {
+      gameActive = false;
+      clearInterval(countdown);
+      clearInterval(spawnInterval);
+      showMotivationScreen();
+    }
+  }, 1000);
 }
 
 function showWaterConfetti() {
