@@ -6,7 +6,8 @@ let state = {
   lastBite: new Date(localStorage.getItem('lastBite') || (Date.now() - 3 * 24 * 60 * 60 * 1000)),
   photos: JSON.parse(localStorage.getItem('photos') || '[]'),
   streakDays: 0,
-  streakHours: 0
+  streakHours: 0,
+  activePhotoIndex: null
 };
 
 const PAL_CONFIG = [
@@ -71,6 +72,16 @@ function renderApp() {
         </button>
       </div>
     </div>
+
+    <!-- Lightbox Overlay -->
+    <div class="lightbox-overlay" id="lightboxModal">
+      <button class="lightbox-close" id="lightboxCloseBtn">&times;</button>
+      <button class="lightbox-nav prev" id="lightboxPrevBtn">&#10094;</button>
+      <button class="lightbox-nav next" id="lightboxNextBtn">&#10095;</button>
+      <div class="lightbox-content" id="lightboxContent">
+        <!-- Image and info injected here -->
+      </div>
+    </div>
   `;
 
   renderContent();
@@ -83,6 +94,37 @@ function renderApp() {
   document.getElementById('newRandomBtn').addEventListener('click', () => {
     showRandomUrgeMethod();
   });
+
+  document.getElementById('lightboxCloseBtn').addEventListener('click', closeLightbox);
+  document.getElementById('lightboxPrevBtn').addEventListener('click', prevPhoto);
+  document.getElementById('lightboxNextBtn').addEventListener('click', nextPhoto);
+
+  initSwipeGestures();
+}
+
+function initSwipeGestures() {
+  const lightboxModal = document.getElementById('lightboxModal');
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  lightboxModal.addEventListener('touchstart', e => {
+    touchStartX = e.changedTouches[0].screenX;
+  });
+
+  lightboxModal.addEventListener('touchend', e => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+  });
+
+  function handleSwipe() {
+    const swipeThreshold = 50; // Minimum distance to trigger swipe
+    if (touchEndX < touchStartX - swipeThreshold) {
+      nextPhoto(); // Swipe left
+    }
+    if (touchEndX > touchStartX + swipeThreshold) {
+      prevPhoto(); // Swipe right
+    }
+  }
 }
 
 function renderContent() {
@@ -124,8 +166,8 @@ function renderContent() {
         
         <div class="photo-grid" id="photoGrid">
           ${state.photos.length === 0 ? '<div class="empty-state">Noch keine Fotos. Fang heute an!</div>' : ''}
-          ${state.photos.map(photo => `
-            <div class="photo-card">
+          ${state.photos.map((photo, index) => `
+            <div class="photo-card" onclick="openLightbox(${index})">
               <img src="${photo.url}" class="photo-img">
               <div class="photo-info">
                 <div class="photo-date">${new Date(photo.date).toLocaleDateString('de-DE')}</div>
@@ -237,8 +279,48 @@ function handlePhotoUpload(e) {
   reader.readAsDataURL(file);
 }
 
+/* --- Lightbox Logic --- */
+window.openLightbox = function(index) {
+  state.activePhotoIndex = index;
+  renderLightboxContent();
+  document.getElementById('lightboxModal').classList.add('active');
+};
+
+function closeLightbox() {
+  document.getElementById('lightboxModal').classList.remove('active');
+  state.activePhotoIndex = null;
+}
+
+function nextPhoto() {
+  if (state.activePhotoIndex === null) return;
+  state.activePhotoIndex = (state.activePhotoIndex + 1) % state.photos.length;
+  renderLightboxContent();
+}
+
+function prevPhoto() {
+  if (state.activePhotoIndex === null) return;
+  state.activePhotoIndex = (state.activePhotoIndex - 1 + state.photos.length) % state.photos.length;
+  renderLightboxContent();
+}
+
 // Initial render
 renderApp();
+
+function renderLightboxContent() {
+  if (state.activePhotoIndex === null) return;
+  const photo = state.photos[state.activePhotoIndex];
+  const container = document.getElementById('lightboxContent');
+  
+  container.innerHTML = `
+    <div class="lightbox-img-container">
+      <img src="${photo.url}" class="lightbox-img">
+    </div>
+    <div class="lightbox-info">
+      <div class="lightbox-info-date">${new Date(photo.date).toLocaleDateString('de-DE')}</div>
+      <div class="lightbox-info-tag">Tag ${photo.day}</div>
+    </div>
+  `;
+}
 
 // Update streak every minute
 setInterval(() => {
