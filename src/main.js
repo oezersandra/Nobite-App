@@ -375,10 +375,10 @@ function attachNavListeners() {
 }
 
 const URGE_METHODS = [
-  { icon: '🧘', title: 'Atemübung (4-4-6)', desc: 'Atme tief ein (4s), halte (4s), atme aus (6s). Beruhigt sofort.', action: 'Atemübung starten' },
-  { icon: '💧', title: 'Wasser trinken', desc: 'Steh auf und hol dir ein frisches Glas Wasser. Physische Ablenkung.', action: 'Wasser getrunken' },
-  { icon: '✨', title: 'Positiver Gedanke', desc: 'Du bist stark! Jeder Moment ohne Kauen ist ein Gewinn. Schau auf deinen Fortschritt!', action: 'Verstanden' },
-  { icon: '🎮', title: 'Mini-Ablenkung', desc: 'Tippe 10 Mal schnell auf den Bildschirm! Beschäftige deine Hände.', action: 'Erledigt' }
+  { id: 'breathe', icon: '🧘', title: 'Atemübung (4-4-6)', desc: 'Atme tief ein (4s), halte (4s), atme aus (6s). Beruhigt sofort.', action: 'Atemübung starten' },
+  { id: 'water', icon: '💧', title: 'Wasser trinken', desc: 'Steh auf und hol dir ein frisches Glas Wasser. Physische Ablenkung.', action: 'Wasser getrunken' },
+  { id: 'thought', icon: '✨', title: 'Positiver Gedanke', desc: 'Du bist stark! Jeder Moment ohne Kauen ist ein Gewinn. Schau auf deinen Fortschritt!', action: 'Verstanden' },
+  { id: 'game', icon: '🎮', title: 'Mini-Ablenkung', desc: 'Zerplatze die Blasen auf dem Bildschirm! Beschäftige deine Hände.', action: 'Spiel starten' }
 ];
 
 const MOTIVATIONAL_QUOTES = [
@@ -406,6 +406,17 @@ window.showMotivationScreen = function() {
   `;
 };
 
+window.startUrgeAction = function(id) {
+  if (id === 'breathe') startBreathingExercise();
+  else if (id === 'game') startBubbleGame();
+  else if (id === 'water') {
+    showWaterConfetti();
+    showMotivationScreen();
+  } else {
+    showMotivationScreen();
+  }
+};
+
 function showRandomUrgeMethod() {
   let randomIndex;
   do {
@@ -424,10 +435,109 @@ function showRandomUrgeMethod() {
       <div class="method-text" style="align-items: center;">
         <div class="method-title" style="font-size: 20px; margin-bottom: 8px;">${method.title}</div>
         <div class="method-desc" style="font-size: 14px; margin-bottom: 24px;">${method.desc}</div>
-        <button class="urge-btn" style="width: 100%; justify-content: center;" onclick="showMotivationScreen()">${method.action}</button>
+        <button class="urge-btn" style="width: 100%; justify-content: center;" onclick="startUrgeAction('${method.id}')">${method.action}</button>
       </div>
     </div>
   `;
+}
+
+/* --- Interactive Actions --- */
+function startBreathingExercise() {
+  const container = document.getElementById('randomMethodContainer');
+  document.getElementById('newRandomBtn').style.display = 'none';
+  
+  container.innerHTML = `
+    <div class="breathing-container">
+      <div class="breath-circle" id="breathCircle">Bereit?</div>
+      <div class="breath-instruction" id="breathLabel">Atme tief ein...</div>
+    </div>
+  `;
+  
+  const circle = document.getElementById('breathCircle');
+  const label = document.getElementById('breathLabel');
+  let cycle = 0;
+  
+  const runCycle = () => {
+    if (cycle >= 3) {
+      clearInterval(interval);
+      showMotivationScreen();
+      return;
+    }
+    
+    // Einatmen (4s)
+    label.innerText = "Einatmen...";
+    circle.style.transform = "scale(1.5)";
+    circle.innerText = "4s";
+    
+    setTimeout(() => {
+      // Halten (4s)
+      label.innerText = "Halten...";
+      circle.style.transform = "scale(1.5)";
+      circle.innerText = "4s";
+      
+      setTimeout(() => {
+        // Ausatmen (6s)
+        label.innerText = "Ausatmen...";
+        circle.style.transform = "scale(1.0)";
+        circle.innerText = "6s";
+        
+        cycle++;
+      }, 4000);
+    }, 4000);
+  };
+  
+  runCycle();
+  const interval = setInterval(runCycle, 14000);
+}
+
+function startBubbleGame() {
+  const container = document.getElementById('randomMethodContainer');
+  document.getElementById('newRandomBtn').style.display = 'none';
+  
+  container.innerHTML = `
+    <div class="bubble-game-view">
+      <h3 style="margin-bottom: 10px;">Blasen zerplatzen!</h3>
+      <div class="pop-counter">Noch <span id="popCount">10</span></div>
+      <div class="bubble-game-container" id="bubbleGameArea"></div>
+    </div>
+  `;
+  
+  const area = document.getElementById('bubbleGameArea');
+  const countEl = document.getElementById('popCount');
+  let popped = 0;
+  const total = 10;
+  
+  for (let i = 0; i < total; i++) {
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.style.left = Math.random() * 80 + 10 + '%';
+    bubble.style.top = Math.random() * 80 + 10 + '%';
+    bubble.style.animationDelay = Math.random() * 2 + 's';
+    
+    bubble.addEventListener('click', () => {
+      if (!bubble.classList.contains('popped')) {
+        bubble.classList.add('popped');
+        popped++;
+        countEl.innerText = total - popped;
+        if (popped === total) {
+          setTimeout(showMotivationScreen, 500);
+        }
+      }
+    });
+    
+    area.appendChild(bubble);
+  }
+}
+
+function showWaterConfetti() {
+  for (let i = 0; i < 15; i++) {
+    const drop = document.createElement('div');
+    drop.className = 'floating-heart';
+    drop.innerText = '💧';
+    drop.style.left = Math.random() * 100 + '%';
+    document.body.appendChild(drop);
+    setTimeout(() => drop.remove(), 1000);
+  }
 }
 
 function handlePhotoUpload(e) {
