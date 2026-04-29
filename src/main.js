@@ -14,8 +14,19 @@ let state = {
   lastWatered: localStorage.getItem('lastWatered') || null,
   palInventory: JSON.parse(localStorage.getItem('palInventory') || '[]'),
   activeAccessory: localStorage.getItem('activeAccessory') || null,
-  relapseLog: JSON.parse(localStorage.getItem('relapseLog') || '[]')
+  relapseLog: JSON.parse(localStorage.getItem('relapseLog') || '[]'),
+  unlockedBadges: JSON.parse(localStorage.getItem('unlockedBadges') || '[]'),
+  urgeCountSinceRelapse: parseInt(localStorage.getItem('urgeCountSinceRelapse')) || 0
 };
+
+const BADGES = [
+  { id: 'first_day', icon: '🌱', title: 'Erster Schritt', desc: '24 Stunden geschafft!', criteria: (s) => s.streakDays >= 1 },
+  { id: 'week_warrior', icon: '⚔️', title: 'Wochen-Held', desc: '7 Tage am Stück clean!', criteria: (s) => s.streakDays >= 7 },
+  { id: 'month_master', icon: '👑', title: 'Monats-Meister', desc: '30 Tage Disziplin!', criteria: (s) => s.streakDays >= 30 },
+  { id: 'urge_slayer', icon: '🛡️', title: 'Drang-Bändiger', desc: '5x Soforthilfe genutzt.', criteria: (s) => s.urgeCountSinceRelapse >= 5 },
+  { id: 'pal_lover', icon: '❤️', title: 'Pflanzen-Freund', desc: 'Nail Pal gut gepflegt.', criteria: (s) => s.palDrops >= 50 },
+  { id: 'paparazzi', icon: '📸', title: 'Dokumentar', desc: '3 Fotos im Tagebuch.', criteria: (s) => s.photos.length >= 3 }
+];
 
 const SHOP_ITEMS = [
   { id: 'bow', icon: '🎀', name: 'Schleife', price: 10 },
@@ -57,20 +68,24 @@ function renderApp() {
     <main id="mainContent"></main>
 
     <nav class="nav-bar">
-      <div class="nav-item ${state.currentView === 'dashboard' ? 'active' : ''}" data-view="dashboard">
-        <span class="nav-icon">📊</span>
+      <div class="nav-item ${state.currentView === 'dashboard' ? 'active' : ''}" onclick="switchView('dashboard')">
+        <div class="nav-icon">📊</div>
         <span>Dashboard</span>
       </div>
-      <div class="nav-item ${state.currentView === 'gallery' ? 'active' : ''}" data-view="gallery">
-        <span class="nav-icon">📸</span>
+      <div class="nav-item ${state.currentView === 'gallery' ? 'active' : ''}" onclick="switchView('gallery')">
+        <div class="nav-icon">📸</div>
         <span>Galerie</span>
       </div>
-      <div class="nav-item ${state.currentView === 'nailpal' ? 'active' : ''}" data-view="nailpal">
-        <span class="nav-icon">🪴</span>
+      <div class="nav-item ${state.currentView === 'nailpal' ? 'active' : ''}" onclick="switchView('nailpal')">
+        <div class="nav-icon">🪴</div>
         <span>Nail Pal</span>
       </div>
-      <div class="nav-item ${state.currentView === 'tips' ? 'active' : ''}" data-view="tips">
-        <span class="nav-icon">💡</span>
+      <div class="nav-item ${state.currentView === 'achievements' ? 'active' : ''}" onclick="switchView('achievements')">
+        <div class="nav-icon">🏆</div>
+        <span>Erfolge</span>
+      </div>
+      <div class="nav-item ${state.currentView === 'tips' ? 'active' : ''}" onclick="switchView('tips')">
+        <div class="nav-icon">💡</div>
         <span>Tipps</span>
       </div>
     </nav>
@@ -205,6 +220,8 @@ function renderContent() {
     document.querySelector('#photoInput').addEventListener('change', handlePhotoUpload);
   } else if (state.currentView === 'nailpal') {
     container.innerHTML = renderNailPalView();
+  } else if (state.currentView === 'achievements') {
+    container.innerHTML = renderAchievementsView();
   } else if (state.currentView === 'tips') {
     container.innerHTML = renderTipsView();
   }
@@ -316,6 +333,7 @@ window.waterPal = function() {
     localStorage.setItem('palDrops', state.palDrops);
     localStorage.setItem('lastWatered', state.lastWatered);
     showFloatingHearts();
+    checkAchievements();
     renderApp();
   }
 };
@@ -641,6 +659,10 @@ function startBreathingExercise() {
         updateCircle(6, "Ausatmen...", 1.0);
         
         cycle++;
+        // Update urge count
+        state.urgeCountSinceRelapse++;
+        localStorage.setItem('urgeCountSinceRelapse', state.urgeCountSinceRelapse);
+        checkAchievements();
       }, 4000);
     }, 4000);
   };
@@ -830,12 +852,79 @@ window.resetTracker = function() {
     // Also reset goal
     state.targetReward = null;
     state.targetDays = 0;
+    state.urgeCountSinceRelapse = 0;
     localStorage.removeItem('targetReward');
     localStorage.removeItem('targetDays');
+    localStorage.setItem('urgeCountSinceRelapse', '0');
     
     renderApp();
   }
 };
+
+/* --- Achievements Logic --- */
+function checkAchievements() {
+  let newlyUnlocked = [];
+  BADGES.forEach(badge => {
+    if (!state.unlockedBadges.includes(badge.id) && badge.criteria(state)) {
+      state.unlockedBadges.push(badge.id);
+      newlyUnlocked.push(badge);
+    }
+  });
+  
+  if (newlyUnlocked.length > 0) {
+    localStorage.setItem('unlockedBadges', JSON.stringify(state.unlockedBadges));
+    newlyUnlocked.forEach(badge => showAchievementPopup(badge));
+    renderApp();
+  }
+}
+
+function showAchievementPopup(badge) {
+  const popup = document.createElement('div');
+  popup.className = 'achievement-popup';
+  popup.innerHTML = `
+    <div class="achievement-card pulse">
+      <div class="achievement-icon">${badge.icon}</div>
+      <div class="achievement-title">Erfolg freigeschaltet!</div>
+      <div class="achievement-name">${badge.title}</div>
+      <div class="achievement-desc">${badge.desc}</div>
+      <button class="finish-btn" onclick="this.parentElement.parentElement.remove()">Super!</button>
+    </div>
+  `;
+  document.body.appendChild(popup);
+  showConfetti();
+}
+
+function renderAchievementsView() {
+  const unlockedCount = state.unlockedBadges.length;
+  const totalCount = BADGES.length;
+  
+  return `
+    <div class="achievements-container">
+      <h2 class="tips-title">Deine Erfolge 🏆</h2>
+      <p class="tips-subtitle">${unlockedCount} von ${totalCount} Medaillen gesammelt.</p>
+      
+      <div class="badge-grid">
+        ${BADGES.map(badge => {
+          const isUnlocked = state.unlockedBadges.includes(badge.id);
+          return `
+            <div class="badge-item ${isUnlocked ? 'unlocked' : 'locked'}">
+              <div class="badge-icon">${badge.icon}</div>
+              <div class="badge-label">${badge.title}</div>
+              ${isUnlocked ? '' : '<div style="font-size: 8px; color: var(--color-text-dim);">Noch gesperrt</div>'}
+            </div>
+          `;
+        }).join('')}
+      </div>
+      
+      ${unlockedCount === totalCount ? `
+        <div class="goal-card goal-success" style="margin-top: 20px;">
+          <div class="goal-success-text">Wahnsinn!</div>
+          <div class="goal-success-subtext">Du hast alle Erfolge freigeschaltet. Du bist ein echter Profi!</div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
 
 function showConfetti() {
   const emojis = ['🎉', '✨', '🏆', '💎', '🌸'];
