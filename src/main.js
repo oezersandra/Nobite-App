@@ -910,7 +910,9 @@ function renderAchievementsView() {
             <div class="badge-item ${isUnlocked ? 'unlocked' : 'locked'}">
               <div class="badge-icon">${badge.icon}</div>
               <div class="badge-label">${badge.title}</div>
-              ${isUnlocked ? '' : '<div style="font-size: 8px; color: var(--color-text-dim);">Noch gesperrt</div>'}
+              <div style="font-size: 9px; margin-top: 4px; color: var(--color-text-dim); line-height: 1.2;">
+                ${isUnlocked ? 'Freigeschaltet!' : badge.desc}
+              </div>
             </div>
           `;
         }).join('')}
