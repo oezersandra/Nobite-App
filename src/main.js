@@ -7,7 +7,9 @@ let state = {
   photos: JSON.parse(localStorage.getItem('photos') || '[]'),
   streakDays: 0,
   streakHours: 0,
-  activePhotoIndex: null
+  activePhotoIndex: null,
+  targetReward: localStorage.getItem('targetReward') || null,
+  targetDays: parseInt(localStorage.getItem('targetDays')) || 0
 };
 
 const PAL_CONFIG = [
@@ -149,6 +151,12 @@ function renderContent() {
           <span class="icon">✨</span>
           Ich habe Drang...
         </button>
+        
+        <div id="goalContainer">
+          ${renderGoalCard()}
+        </div>
+        
+        <button class="reset-btn" onclick="resetTracker()">Ich habe gekaut (Tracker & Ziel zurücksetzen)</button>
       </div>
     `;
     document.querySelector('#urgeBtn').addEventListener('click', () => {
@@ -277,6 +285,112 @@ function handlePhotoUpload(e) {
     renderContent();
   };
   reader.readAsDataURL(file);
+}
+
+/* --- Goal & Reward Logic --- */
+function renderGoalCard() {
+  if (!state.targetReward || state.targetDays === 0) {
+    return `
+      <div class="goal-card">
+        <div class="goal-card-title">🏆 Setze dir eine Belohnung!</div>
+        <div class="goal-input-group">
+          <input type="text" id="goalRewardInput" class="goal-input" placeholder="Was möchtest du dir gönnen? (z.B. Eis)">
+          <input type="number" id="goalDaysInput" class="goal-input" placeholder="Nach wie vielen Tagen?" min="1">
+        </div>
+        <button class="finish-btn" onclick="saveGoal()">Ziel setzen</button>
+      </div>
+    `;
+  }
+
+  if (state.streakDays >= state.targetDays) {
+    return `
+      <div class="goal-card goal-success">
+        <div class="goal-success-icon">🎉</div>
+        <div class="goal-success-text">Ziel erreicht!</div>
+        <div class="goal-success-subtext">Hol dir deine Belohnung: <b>${state.targetReward}</b></div>
+        <button class="finish-btn" onclick="resetGoal()">Neues Ziel setzen</button>
+      </div>
+    `;
+  }
+
+  const progressPercent = Math.min((state.streakDays / state.targetDays) * 100, 100);
+  return `
+    <div class="goal-card">
+      <div class="goal-card-title">🏆 Dein Ziel</div>
+      <div class="goal-reward-text">${state.targetReward}</div>
+      <div class="goal-progress-container">
+        <div class="goal-progress-bar-bg">
+          <div class="goal-progress-bar-fill" style="width: ${progressPercent}%"></div>
+        </div>
+        <div class="goal-progress-text">${state.streakDays} / ${state.targetDays} Tagen geschafft</div>
+      </div>
+    </div>
+  `;
+}
+
+window.saveGoal = function() {
+  const rewardInput = document.getElementById('goalRewardInput').value.trim();
+  const daysInput = parseInt(document.getElementById('goalDaysInput').value);
+
+  if (rewardInput && daysInput > 0) {
+    state.targetReward = rewardInput;
+    state.targetDays = daysInput;
+    localStorage.setItem('targetReward', rewardInput);
+    localStorage.setItem('targetDays', daysInput);
+    
+    // Check immediately if goal is somehow already reached
+    if (state.streakDays >= state.targetDays) {
+      showConfetti();
+    }
+    
+    renderApp();
+  } else {
+    alert("Bitte gib eine Belohnung und eine gültige Tagesanzahl ein.");
+  }
+};
+
+window.resetGoal = function() {
+  state.targetReward = null;
+  state.targetDays = 0;
+  localStorage.removeItem('targetReward');
+  localStorage.removeItem('targetDays');
+  renderApp();
+};
+
+window.resetTracker = function() {
+  if (confirm("Bist du sicher? Dies setzt deinen Fortschritt und dein aktuelles Ziel auf 0 zurück.")) {
+    state.lastBite = new Date();
+    localStorage.setItem('lastBite', state.lastBite.toISOString());
+    state.streakDays = 0;
+    state.streakHours = 0;
+    
+    // Also reset goal
+    state.targetReward = null;
+    state.targetDays = 0;
+    localStorage.removeItem('targetReward');
+    localStorage.removeItem('targetDays');
+    
+    renderApp();
+  }
+};
+
+function showConfetti() {
+  const emojis = ['🎉', '✨', '🏆', '💎', '🌸'];
+  for (let i = 0; i < 40; i++) {
+    const confetti = document.createElement('div');
+    confetti.className = 'confetti';
+    confetti.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+    confetti.style.left = Math.random() * 100 + 'vw';
+    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's'; // 2-4s
+    confetti.style.fontSize = (Math.random() * 16 + 16) + 'px'; // 16-32px
+    
+    document.body.appendChild(confetti);
+    
+    // Clean up
+    setTimeout(() => {
+      confetti.remove();
+    }, 4000);
+  }
 }
 
 /* --- Lightbox Logic --- */
