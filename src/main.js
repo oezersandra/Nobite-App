@@ -21,11 +21,17 @@ let state = {
 
 const BADGES = [
   { id: 'first_day', icon: '🌱', title: 'Erster Schritt', desc: '24 Stunden geschafft!', criteria: (s) => s.streakDays >= 1 },
+  { id: 'streak_3', icon: '🥉', title: 'Drei-Tage-Bart', desc: '3 Tage ohne Kauen!', criteria: (s) => s.streakDays >= 3 },
   { id: 'week_warrior', icon: '⚔️', title: 'Wochen-Held', desc: '7 Tage am Stück clean!', criteria: (s) => s.streakDays >= 7 },
-  { id: 'month_master', icon: '👑', title: 'Monats-Meister', desc: '30 Tage Disziplin!', criteria: (s) => s.streakDays >= 30 },
+  { id: 'fortnight', icon: '🥈', title: 'Zwei Wochen!', desc: '14 Tage Disziplin.', criteria: (s) => s.streakDays >= 14 },
+  { id: 'month_master', icon: '👑', title: 'Monats-Meister', desc: '30 Tage am Stück!', criteria: (s) => s.streakDays >= 30 },
   { id: 'urge_slayer', icon: '🛡️', title: 'Drang-Bändiger', desc: '5x Soforthilfe genutzt.', criteria: (s) => s.urgeCountSinceRelapse >= 5 },
+  { id: 'bubble_fun', icon: '🫧', title: 'Seifenblasen-Pro', desc: 'Das Bubble-Spiel gespielt.', criteria: (s) => localStorage.getItem('playedBubbleGame') === 'true' },
   { id: 'pal_lover', icon: '❤️', title: 'Pflanzen-Freund', desc: 'Nail Pal gut gepflegt.', criteria: (s) => s.palDrops >= 50 },
-  { id: 'paparazzi', icon: '📸', title: 'Dokumentar', desc: '3 Fotos im Tagebuch.', criteria: (s) => s.photos.length >= 3 }
+  { id: 'fashionista', icon: '🕶️', title: 'Fashionista', desc: 'Ein Accessoire getragen.', criteria: (s) => s.activeAccessory !== null },
+  { id: 'paparazzi', icon: '📸', title: 'Dokumentar', desc: '3 Fotos im Tagebuch.', criteria: (s) => s.photos.length >= 3 },
+  { id: 'shopaholic', icon: '🛍️', title: 'Shopping-Tour', desc: '2 Items im Shop gekauft.', criteria: (s) => s.palInventory.length >= 2 },
+  { id: 'night_owl', icon: '🦉', title: 'Nachteule', desc: 'Die App nach 22 Uhr genutzt.', criteria: (s) => new Date().getHours() >= 22 }
 ];
 
 const SHOP_ITEMS = [
@@ -364,6 +370,7 @@ window.buyItem = function(id, price) {
     state.palInventory.push(id);
     localStorage.setItem('palDrops', state.palDrops);
     localStorage.setItem('palInventory', JSON.stringify(state.palInventory));
+    checkAchievements();
     renderApp();
   }
 };
@@ -375,6 +382,7 @@ window.equipItem = function(id) {
     state.activeAccessory = id; // Equip
   }
   localStorage.setItem('activeAccessory', state.activeAccessory || '');
+  checkAchievements();
   renderApp();
 };
 
@@ -736,6 +744,8 @@ function startBubbleGame() {
       gameActive = false;
       clearInterval(countdown);
       clearInterval(spawnInterval);
+      localStorage.setItem('playedBubbleGame', 'true');
+      checkAchievements();
       showMotivationScreen();
     }
   }, 1000);
@@ -765,6 +775,7 @@ function handlePhotoUpload(e) {
     };
     state.photos.unshift(photo);
     localStorage.setItem('photos', JSON.stringify(state.photos));
+    checkAchievements();
     renderContent();
   };
   reader.readAsDataURL(file);
@@ -977,6 +988,8 @@ function prevPhoto() {
 }
 
 // Initial render
+calculateStreak();
+checkAchievements();
 renderApp();
 
 function renderLightboxContent() {
