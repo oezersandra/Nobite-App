@@ -252,21 +252,236 @@ body {
 }
 
 /* Nail Pal Styles */
+/* Nail Pal Container */
 .nail-pal-container {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 30px;
-  text-align: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.pal-header {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -10px;
+}
+
+.pal-drops {
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  font-weight: 600;
+  color: #4ade80;
+}
+
+.pal-character-wrapper {
+  position: relative;
+  cursor: pointer;
 }
 
 .pal-character {
   font-size: 100px;
+  text-align: center;
   filter: drop-shadow(0 0 20px var(--color-primary-glow));
-  transition: var(--transition);
+}
+
+.pal-accessory {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  font-size: 50px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.wobble {
+  animation: wobble 0.5s ease-in-out;
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-10deg) scale(1.1); }
+  75% { transform: rotate(10deg) scale(1.1); }
+}
+
+.floating-heart {
+  position: fixed;
+  bottom: 50%;
+  font-size: 24px;
+  pointer-events: none;
+  animation: floatHeart 1s ease-out forwards;
+  z-index: 999;
+}
+
+@keyframes floatHeart {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+}
+
+.water-btn {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: #60a5fa;
+  padding: 12px 24px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+  max-width: 300px;
+}
+
+.water-btn:hover:not(.disabled) {
+  background: rgba(59, 130, 246, 0.4);
+}
+
+.water-btn.disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-dim);
+  cursor: not-allowed;
+}
+
+.pal-shop {
+  width: 100%;
+  margin-top: 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid var(--glass-border);
+}
+
+.shop-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.shop-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.shop-item-icon {
+  font-size: 32px;
+}
+
+.shop-item-name {
+  font-size: 14px;
+  color: white;
+}
+
+.shop-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.shop-btn.buy-btn {
+  background: var(--color-primary);
+  color: white;
+}
+
+.shop-btn.buy-btn[disabled] {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+}
+
+.shop-btn.equip-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Tips View */
+.tips-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tips-title {
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  color: white;
+}
+
+.tips-subtitle {
+  font-size: 14px;
+  color: var(--color-text-dim);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tip-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.tip-icon {
+  font-size: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tip-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+.tip-card-text {
+  font-size: 14px;
+  color: var(--color-text-dim);
+  line-height: 1.5;
 }
 
 .pal-character:active {

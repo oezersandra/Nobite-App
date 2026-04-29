@@ -9,8 +9,19 @@ let state = {
   streakHours: 0,
   activePhotoIndex: null,
   targetReward: localStorage.getItem('targetReward') || null,
-  targetDays: parseInt(localStorage.getItem('targetDays')) || 0
+  targetDays: parseInt(localStorage.getItem('targetDays')) || 0,
+  palDrops: parseInt(localStorage.getItem('palDrops')) || 0,
+  lastWatered: localStorage.getItem('lastWatered') || null,
+  palInventory: JSON.parse(localStorage.getItem('palInventory') || '[]'),
+  activeAccessory: localStorage.getItem('activeAccessory') || null
 };
+
+const SHOP_ITEMS = [
+  { id: 'bow', icon: '🎀', name: 'Schleife', price: 10 },
+  { id: 'glasses', icon: '🕶️', name: 'Sonnenbrille', price: 30 },
+  { id: 'hat', icon: '🎩', name: 'Zylinder', price: 50 },
+  { id: 'party', icon: '🎉', name: 'Partyhut', price: 100 }
+];
 
 const PAL_CONFIG = [
   { minDays: 0, icon: '🌱', status: 'Frisch gekeimt', quote: 'Jeder große Baum war einmal ein kleiner Samen. Fang heute an!' },
@@ -56,6 +67,10 @@ function renderApp() {
       <div class="nav-item ${state.currentView === 'nailpal' ? 'active' : ''}" data-view="nailpal">
         <span class="nav-icon">🪴</span>
         <span>Nail Pal</span>
+      </div>
+      <div class="nav-item ${state.currentView === 'tips' ? 'active' : ''}" data-view="tips">
+        <span class="nav-icon">💡</span>
+        <span>Tipps</span>
       </div>
     </nav>
 
@@ -188,19 +203,165 @@ function renderContent() {
     `;
     document.querySelector('#photoInput').addEventListener('change', handlePhotoUpload);
   } else if (state.currentView === 'nailpal') {
-    const pal = getPalState();
-    container.innerHTML = `
-      <div class="nail-pal-container">
+    container.innerHTML = renderNailPalView();
+  } else if (state.currentView === 'tips') {
+    container.innerHTML = renderTipsView();
+  }
+}
+
+/* --- Tips Logic --- */
+function renderTipsView() {
+  const tips = [
+    { icon: '💅', title: 'Nägel kurz halten & feilen', text: 'Halte deine Nägel möglichst kurz und feile raue Kanten sofort glatt. Je weniger Angriffsfläche, desto besser!' },
+    { icon: '🧴', title: 'Handcreme & Nagelöl', text: 'Pflege deine Nagelhaut! Trockene Haut verleitet oft zum Knibbeln. Eine Handcreme in der Tasche wirkt Wunder.' },
+    { icon: '🍬', title: 'Kaugummi kauen', text: 'Wenn der Drang groß ist, nimm einen Kaugummi. Das beschäftigt deinen Mund und lenkt ab.' },
+    { icon: '🛡️', title: 'Bitterlack auftragen', text: 'Ein spezieller Lack mit bitterem Geschmack fungiert als "Stoppschild", falls du doch mal unbewusst den Finger zum Mund führst.' },
+    { icon: '🎯', title: 'Trigger identifizieren', text: 'Achte darauf, WANN du kaust. Bei Stress? Aus Langeweile? Beim Fernsehen? Finde Alternativen für diese Situationen (z.B. einen Stressball).' }
+  ];
+
+  return `
+    <div class="tips-container">
+      <h2 class="tips-title">Hilfreiche Tipps & Tricks</h2>
+      <p class="tips-subtitle">Kleine Veränderungen im Alltag machen einen großen Unterschied.</p>
+      
+      <div class="tips-list">
+        ${tips.map(tip => `
+          <div class="tip-card">
+            <div class="tip-icon">${tip.icon}</div>
+            <div class="tip-content">
+              <h3 class="tip-card-title">${tip.title}</h3>
+              <p class="tip-card-text">${tip.text}</p>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/* --- Nail Pal Game Logic --- */
+function renderNailPalView() {
+  const pal = getPalState();
+  const today = new Date().toLocaleDateString('de-DE');
+  const canWater = state.lastWatered !== today;
+  
+  let accessoryHTML = '';
+  if (state.activeAccessory) {
+    const item = SHOP_ITEMS.find(i => i.id === state.activeAccessory);
+    if (item) accessoryHTML = `<div class="pal-accessory">${item.icon}</div>`;
+  }
+
+  let quote = pal.quote;
+  if (canWater) {
+    quote = "Ich habe Durst... 💧";
+  }
+
+  return `
+    <div class="nail-pal-container">
+      <div class="pal-header">
+        <div class="pal-drops">💧 ${state.palDrops} Tropfen</div>
+      </div>
+      
+      <div class="pal-character-wrapper" onclick="interactWithPal(this)">
         <div class="pal-character pulse">${pal.icon}</div>
-        <div class="message-bubble">
-          <div class="pal-status">${pal.status}</div>
-          <div class="pal-quote">"${pal.quote}"</div>
-        </div>
-        <div class="pal-info" style="color: var(--color-text-dim); font-size: 14px;">
-          Dein Begleiter wächst mit jedem Tag, an dem du nicht kaust.
+        ${accessoryHTML}
+      </div>
+      
+      <div class="message-bubble" id="palBubble">
+        <div class="pal-status">${pal.status}</div>
+        <div class="pal-quote">"${quote}"</div>
+      </div>
+      
+      <button class="water-btn ${canWater ? '' : 'disabled'}" onclick="waterPal()" ${canWater ? '' : 'disabled'}>
+        ${canWater ? '💦 Pflanze gießen (+10 Tropfen)' : '✅ Für heute gegossen!'}
+      </button>
+
+      <div class="pal-shop">
+        <h3 class="shop-title">Boutique</h3>
+        <div class="shop-grid">
+          ${SHOP_ITEMS.map(item => {
+            const owned = state.palInventory.includes(item.id);
+            const equipped = state.activeAccessory === item.id;
+            
+            let btnHTML = '';
+            if (!owned) {
+              const canAfford = state.palDrops >= item.price;
+              btnHTML = `<button class="shop-btn buy-btn" onclick="buyItem('${item.id}', ${item.price})" ${canAfford ? '' : 'disabled'}>${item.price} 💧</button>`;
+            } else if (equipped) {
+              btnHTML = `<button class="shop-btn equip-btn active" onclick="equipItem('${item.id}')">Trägt es</button>`;
+            } else {
+              btnHTML = `<button class="shop-btn equip-btn" onclick="equipItem('${item.id}')">Anziehen</button>`;
+            }
+            
+            return `
+              <div class="shop-item">
+                <div class="shop-item-icon">${item.icon}</div>
+                <div class="shop-item-name">${item.name}</div>
+                ${btnHTML}
+              </div>
+            `;
+          }).join('')}
         </div>
       </div>
-    `;
+    </div>
+  `;
+}
+
+window.waterPal = function() {
+  const today = new Date().toLocaleDateString('de-DE');
+  if (state.lastWatered !== today) {
+    state.palDrops += 10;
+    state.lastWatered = today;
+    localStorage.setItem('palDrops', state.palDrops);
+    localStorage.setItem('lastWatered', state.lastWatered);
+    showFloatingHearts();
+    renderApp();
+  }
+};
+
+window.interactWithPal = function(element) {
+  element.classList.add('wobble');
+  showFloatingHearts();
+  
+  const quotes = ["Ich hab dich lieb! 💚", "Du bist stark! ✨", "Gemeinsam wachsen wir! 🌱", "Heute ist ein toller Tag! ☀️"];
+  const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+  
+  const bubble = document.getElementById('palBubble');
+  if (bubble) {
+    bubble.querySelector('.pal-quote').innerText = '"' + randomQuote + '"';
+  }
+  
+  setTimeout(() => element.classList.remove('wobble'), 500);
+};
+
+window.buyItem = function(id, price) {
+  if (state.palDrops >= price) {
+    state.palDrops -= price;
+    state.palInventory.push(id);
+    localStorage.setItem('palDrops', state.palDrops);
+    localStorage.setItem('palInventory', JSON.stringify(state.palInventory));
+    renderApp();
+  }
+};
+
+window.equipItem = function(id) {
+  if (state.activeAccessory === id) {
+    state.activeAccessory = null; // Unequip
+  } else {
+    state.activeAccessory = id; // Equip
+  }
+  localStorage.setItem('activeAccessory', state.activeAccessory || '');
+  renderApp();
+};
+
+function showFloatingHearts() {
+  for (let i = 0; i < 3; i++) {
+    const heart = document.createElement('div');
+    heart.className = 'floating-heart';
+    heart.innerText = '💚';
+    heart.style.left = (Math.random() * 40 + 30) + '%';
+    document.body.appendChild(heart);
+    setTimeout(() => heart.remove(), 1000);
   }
 }
 
