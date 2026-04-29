@@ -390,6 +390,8 @@ function renderTriggerCard() {
   const analysis = analyzeTriggers();
   if (!analysis || analysis.count < 1) return "";
   
+  const isEnabled = ("Notification" in window) && Notification.permission === "granted";
+  
   return `
     <div class="goal-card trigger-card">
       <div class="goal-card-title">🔍 Trigger-Erkenntnis</div>
@@ -402,16 +404,29 @@ function renderTriggerCard() {
       <div style="font-size: 14px; color: var(--color-text-dim);">
         Bleib in dieser Zeit besonders wachsam! Nutze dann öfter den "Drang"-Button.
       </div>
-      <button class="urge-btn" style="margin-top: 15px; width: 100%; justify-content: center; background: rgba(251, 191, 36, 0.2); color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" onclick="window.requestNotificationPermission()">
-        Benachrichtigungen aktivieren
-      </button>
+      ${isEnabled ? 
+        `<div style="margin-top: 15px; color: #10b981; font-weight: bold; text-align: center;">✅ Benachrichtigungen aktiv</div>` :
+        `<button class="finish-btn" style="margin-top: 15px; width: 100%; background: #fbbf24; color: #000;" onclick="window.requestNotificationPermission()">
+          Warnungen einschalten
+        </button>`
+      }
     </div>
   `;
 }
 
 window.requestNotificationPermission = function() {
   if (!("Notification" in window)) {
-    alert("Dieser Browser unterstützt keine Benachrichtigungen.");
+    alert("Dein Browser unterstützt leider keine Benachrichtigungen. (Auf dem iPhone musst du die App zum Homescreen hinzufügen)");
+    return;
+  }
+  
+  if (Notification.permission === "denied") {
+    alert("Du hast Benachrichtigungen für diese Seite blockiert. Bitte aktiviere sie in den Einstellungen deines Browsers/iPhones.");
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    alert("Benachrichtigungen sind bereits aktiviert! Du wirst gewarnt, sobald eine kritische Phase bevorsteht.");
     return;
   }
   
@@ -421,6 +436,8 @@ window.requestNotificationPermission = function() {
         body: "Super! Ich werde dich vor deinen kritischen Zeiten warnen.",
         icon: "/vite.svg"
       });
+    } else {
+      alert("Benachrichtigungen wurden nicht erlaubt.");
     }
   });
 };
