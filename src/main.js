@@ -163,6 +163,8 @@ function renderContent() {
           </div>
         </div>
 
+        ${renderInAppWarning()}
+
         <button class="urge-btn" id="urgeBtn">
           <span class="icon">✨</span>
           Ich habe Drang...
@@ -441,6 +443,30 @@ window.requestNotificationPermission = function() {
     }
   });
 };
+
+function renderInAppWarning() {
+  const analysis = analyzeTriggers();
+  if (!analysis) return "";
+  
+  const currentHour = new Date().getHours();
+  // Show warning if we are in or 1 hour before the critical hour
+  if (currentHour === analysis.hour || currentHour === (analysis.hour - 1)) {
+    return `
+      <div class="goal-card" style="background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; animation: pulse 2s infinite;">
+        <div style="display: flex; align-items: center; gap: 10px; color: #ef4444; font-weight: bold; font-size: 16px;">
+          <span>⚠️</span> ACHTUNG: KRITISCHE PHASE
+        </div>
+        <div style="font-size: 14px; margin-top: 5px; color: var(--color-text);">
+          Es ist gerade dein typischer Zeitpunkt für Rückfälle (${analysis.label}). Sei besonders wachsam!
+        </div>
+        <button class="urge-btn" style="margin-top: 10px; padding: 12px; background: #ef4444; color: white;" onclick="showRandomUrgeMethod(); document.getElementById('urgeModal').classList.add('active');">
+          Drang jetzt bekämpfen!
+        </button>
+      </div>
+    `;
+  }
+  return "";
+}
 
 function checkTriggerNotifications() {
   const analysis = analyzeTriggers();
