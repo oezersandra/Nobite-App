@@ -343,6 +343,11 @@ body {
   100% { transform: scale(1); opacity: 1; }
 }
 
+@keyframes floatUp {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
 .pulse {
   animation: pulse 2s infinite ease-in-out;
 }
@@ -453,7 +458,57 @@ body {
 }
 
 .method-desc {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text-dim);
-  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* Motivation Screen */
+.motivation-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  animation: floatUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.motivation-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.motivation-quote {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.motivation-subtext {
+  font-size: 16px;
+  color: var(--color-text-dim);
+  margin-bottom: 32px;
+}
+
+.finish-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.finish-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
 }

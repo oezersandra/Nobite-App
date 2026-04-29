@@ -165,12 +165,35 @@ function attachNavListeners() {
 
 const URGE_METHODS = [
   { icon: '🧘', title: 'Atemübung (4-4-6)', desc: 'Atme tief ein (4s), halte (4s), atme aus (6s). Beruhigt sofort.', action: 'Atemübung starten' },
-  { icon: '💧', title: 'Wasser trinken', desc: 'Steh auf und hol dir ein frisches Glas Wasser. Physische Ablenkung.', action: 'Erledigt' },
+  { icon: '💧', title: 'Wasser trinken', desc: 'Steh auf und hol dir ein frisches Glas Wasser. Physische Ablenkung.', action: 'Wasser getrunken' },
   { icon: '✨', title: 'Positiver Gedanke', desc: 'Du bist stark! Jeder Moment ohne Kauen ist ein Gewinn. Schau auf deinen Fortschritt!', action: 'Verstanden' },
-  { icon: '🎮', title: 'Mini-Ablenkung', desc: 'Tippe 10 Mal schnell auf den Bildschirm! Beschäftige deine Hände.', action: 'Tippen' }
+  { icon: '🎮', title: 'Mini-Ablenkung', desc: 'Tippe 10 Mal schnell auf den Bildschirm! Beschäftige deine Hände.', action: 'Erledigt' }
+];
+
+const MOTIVATIONAL_QUOTES = [
+  { icon: '🌟', quote: 'Großartig!', subtext: 'Jeder Moment ohne Kauen macht dich stärker.' },
+  { icon: '💪', quote: 'Du schaffst das!', subtext: 'Deine Willenskraft wächst mit jedem Tag.' },
+  { icon: '✨', quote: 'Schritt für Schritt.', subtext: 'Geduld zahlt sich aus. Bleib dran!' },
+  { icon: '🏆', quote: 'Stolz auf dich!', subtext: 'Du hast den Drang erfolgreich besiegt.' }
 ];
 
 let currentMethodIndex = -1;
+
+window.showMotivationScreen = function() {
+  const container = document.getElementById('randomMethodContainer');
+  document.getElementById('newRandomBtn').style.display = 'none'; // Hide the random button
+  
+  const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+  
+  container.innerHTML = `
+    <div class="motivation-screen">
+      <div class="motivation-icon">${randomQuote.icon}</div>
+      <div class="motivation-quote">${randomQuote.quote}</div>
+      <div class="motivation-subtext">${randomQuote.subtext}</div>
+      <button class="finish-btn" onclick="document.getElementById('urgeModal').classList.remove('active')">Fertig</button>
+    </div>
+  `;
+};
 
 function showRandomUrgeMethod() {
   let randomIndex;
@@ -181,13 +204,16 @@ function showRandomUrgeMethod() {
   currentMethodIndex = randomIndex;
   const method = URGE_METHODS[currentMethodIndex];
   
+  document.getElementById('newRandomBtn').style.display = 'flex'; // Show random button
+  
   const container = document.getElementById('randomMethodContainer');
   container.innerHTML = `
     <div class="method-item" style="flex-direction: column; text-align: center; gap: 20px; padding: 24px; cursor: default;">
       <div class="method-icon" style="width: 80px; height: 80px; font-size: 40px; margin: 0 auto;">${method.icon}</div>
       <div class="method-text" style="align-items: center;">
         <div class="method-title" style="font-size: 20px; margin-bottom: 8px;">${method.title}</div>
-        <div class="method-desc" style="font-size: 14px;">${method.desc}</div>
+        <div class="method-desc" style="font-size: 14px; margin-bottom: 24px;">${method.desc}</div>
+        <button class="urge-btn" style="width: 100%; justify-content: center;" onclick="showMotivationScreen()">${method.action}</button>
       </div>
     </div>
   `;
