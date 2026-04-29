@@ -511,9 +511,9 @@ function startBubbleGame() {
   container.innerHTML = `
     <div class="bubble-game-view">
       <h3 style="margin-bottom: 5px;">Blasen zerplatzen!</h3>
-      <div style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 10px;">Beschäftige deine Finger für 30 Sekunden.</div>
+      <div style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 10px;">Beschäftige deine Finger für 10 Sekunden.</div>
       <div class="pop-counter" style="position: static; text-align: center; font-size: 24px; color: var(--color-primary); margin-bottom: 10px;">
-        <span id="gameTimer">30</span>s
+        <span id="gameTimer">10</span>s
       </div>
       <div class="bubble-game-container" id="bubbleGameArea" style="height: 250px;"></div>
     </div>
@@ -521,7 +521,7 @@ function startBubbleGame() {
   
   const area = document.getElementById('bubbleGameArea');
   const timerEl = document.getElementById('gameTimer');
-  let timeLeft = 30;
+  let timeLeft = 10;
   let gameActive = true;
   
   const spawnBubble = () => {
