@@ -160,6 +160,11 @@ function initSwipeGestures() {
   }
 }
 
+window.switchView = function(view) {
+  state.currentView = view;
+  renderApp();
+};
+
 function renderContent() {
   const container = document.querySelector('#mainContent');
   
