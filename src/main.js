@@ -118,7 +118,6 @@ function renderApp() {
   `;
 
   renderContent();
-  attachNavListeners();
   
   document.getElementById('closeModalBtn').addEventListener('click', () => {
     document.getElementById('urgeModal').classList.remove('active');
@@ -161,6 +160,7 @@ function initSwipeGestures() {
 }
 
 window.switchView = function(view) {
+  if (!view) return;
   state.currentView = view;
   renderApp();
 };
