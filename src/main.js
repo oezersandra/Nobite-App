@@ -13,7 +13,8 @@ let state = {
   palDrops: parseInt(localStorage.getItem('palDrops')) || 0,
   lastWatered: localStorage.getItem('lastWatered') || null,
   palInventory: JSON.parse(localStorage.getItem('palInventory') || '[]'),
-  activeAccessory: localStorage.getItem('activeAccessory') || null
+  activeAccessory: localStorage.getItem('activeAccessory') || null,
+  relapseLog: JSON.parse(localStorage.getItem('relapseLog') || '[]')
 };
 
 const SHOP_ITEMS = [
@@ -170,6 +171,8 @@ function renderContent() {
         <div id="goalContainer">
           ${renderGoalCard()}
         </div>
+        
+        ${state.relapseLog.length > 0 ? renderTriggerCard().outerHTML : ''}
         
         <button class="reset-btn" onclick="resetTracker()">Ich habe gekaut (Tracker & Ziel zurücksetzen)</button>
       </div>
@@ -353,6 +356,100 @@ window.equipItem = function(id) {
   localStorage.setItem('activeAccessory', state.activeAccessory || '');
   renderApp();
 };
+
+/* --- Trigger Analysis & Notifications --- */
+function analyzeTriggers() {
+  if (state.relapseLog.length === 0) return null;
+  
+  const hourCounts = Array(24).fill(0);
+  state.relapseLog.forEach(log => {
+    const hour = new Date(log.timestamp).getHours();
+    hourCounts[hour]++;
+  });
+  
+  let maxHour = 0;
+  let maxCount = 0;
+  for (let h = 0; h < 24; h++) {
+    if (hourCounts[h] > maxCount) {
+      maxCount = hourCounts[h];
+      maxHour = h;
+    }
+  }
+  
+  let timeLabel = "";
+  if (maxHour >= 5 && maxHour < 12) timeLabel = "Vormittag";
+  else if (maxHour >= 12 && maxHour < 14) timeLabel = "Mittag";
+  else if (maxHour >= 14 && maxHour < 18) timeLabel = "Nachmittag";
+  else if (maxHour >= 18 && maxHour < 22) timeLabel = "Abend";
+  else timeLabel = "Nacht";
+  
+  return { label: timeLabel, hour: maxHour, count: maxCount };
+}
+
+function renderTriggerCard() {
+  const analysis = analyzeTriggers();
+  const card = document.createElement('div');
+  card.className = 'goal-card trigger-card';
+  
+  if (!analysis || analysis.count < 1) return card;
+  
+  card.innerHTML = `
+    <div class="goal-card-title">🔍 Trigger-Erkenntnis</div>
+    <div style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 15px;">
+      Basierend auf deinen Rückfällen ist deine kritische Zeit:
+    </div>
+    <div style="font-size: 24px; font-weight: bold; color: #fbbf24; margin-bottom: 10px;">
+      ${analysis.label}s
+    </div>
+    <div style="font-size: 14px; color: var(--color-text-dim);">
+      Bleib in dieser Zeit besonders wachsam! Nutze dann öfter den "Drang"-Button.
+    </div>
+    <button class="urge-btn" style="margin-top: 15px; width: 100%; justify-content: center; background: rgba(251, 191, 36, 0.2); color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" onclick="requestNotificationPermission()">
+      Benachrichtigungen aktivieren
+    </button>
+  `;
+  return card;
+}
+
+window.requestNotificationPermission = function() {
+  if (!("Notification" in window)) {
+    alert("Dieser Browser unterstützt keine Benachrichtigungen.");
+    return;
+  }
+  
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      new Notification("Nobite", {
+        body: "Super! Ich werde dich vor deinen kritischen Zeiten warnen.",
+        icon: "/vite.svg"
+      });
+    }
+  });
+};
+
+function checkTriggerNotifications() {
+  const analysis = analyzeTriggers();
+  if (!analysis || Notification.permission !== "granted") return;
+  
+  const currentHour = new Date().getHours();
+  // Notify 1 hour before the critical hour
+  if (currentHour === (analysis.hour - 1)) {
+    const lastNotified = localStorage.getItem('lastTriggerNotify');
+    const today = new Date().toLocaleDateString();
+    
+    if (lastNotified !== today) {
+      new Notification("Achtung: Gefahrenzeit!", {
+        body: `Deine kritische Zeit (${analysis.label}) beginnt bald. Sei wachsam! 🧘`,
+        icon: "/vite.svg"
+      });
+      localStorage.setItem('lastTriggerNotify', today);
+    }
+  }
+}
+
+// Check every 15 minutes
+setInterval(checkTriggerNotifications, 15 * 60 * 1000);
+checkTriggerNotifications();
 
 function showFloatingHearts() {
   for (let i = 0; i < 3; i++) {
@@ -572,7 +669,7 @@ function startBubbleGame() {
 function showWaterConfetti() {
   for (let i = 0; i < 15; i++) {
     const drop = document.createElement('div');
-    drop.className = 'floating-heart';
+    drop.className = 'water-drop';
     drop.innerText = '💧';
     drop.style.left = Math.random() * 100 + '%';
     document.body.appendChild(drop);
@@ -674,6 +771,13 @@ window.resetTracker = function() {
     localStorage.setItem('lastBite', state.lastBite.toISOString());
     state.streakDays = 0;
     state.streakHours = 0;
+    
+    // Log the relapse for trigger analysis
+    state.relapseLog.push({
+      timestamp: new Date().toISOString(),
+      day: state.streakDays
+    });
+    localStorage.setItem('relapseLog', JSON.stringify(state.relapseLog));
     
     // Also reset goal
     state.targetReward = null;
