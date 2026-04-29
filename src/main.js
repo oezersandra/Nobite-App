@@ -163,8 +163,6 @@ function renderContent() {
           </div>
         </div>
 
-        ${renderInAppWarning()}
-
         <button class="urge-btn" id="urgeBtn">
           <span class="icon">✨</span>
           Ich habe Drang...
@@ -173,8 +171,6 @@ function renderContent() {
         <div id="goalContainer">
           ${renderGoalCard()}
         </div>
-        
-        ${renderTriggerCard()}
         
         <button class="reset-btn" onclick="resetTracker()">Ich habe gekaut (Tracker & Ziel zurücksetzen)</button>
       </div>
