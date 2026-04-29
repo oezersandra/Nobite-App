@@ -396,7 +396,10 @@ function renderTriggerCard() {
   
   return `
     <div class="goal-card trigger-card">
-      <div class="goal-card-title">🔍 Trigger-Erkenntnis</div>
+      <div class="goal-card-title">
+        🔍 Trigger-Erkenntnis
+        <span style="font-size: 12px; font-weight: normal; float: right; cursor: pointer; opacity: 0.6;" onclick="window.resetTriggers()">Zurücksetzen</span>
+      </div>
       <div style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 15px;">
         Basierend auf deinen Rückfällen ist deine kritische Zeit:
       </div>
@@ -415,6 +418,14 @@ function renderTriggerCard() {
     </div>
   `;
 }
+
+window.resetTriggers = function() {
+  if (confirm("Möchtest du die Trigger-Analyse wirklich zurücksetzen? Deine bisherigen Rückfall-Daten werden gelöscht.")) {
+    state.relapseLog = [];
+    localStorage.setItem('relapseLog', JSON.stringify([]));
+    renderApp();
+  }
+};
 
 window.requestNotificationPermission = function() {
   if (!("Notification" in window)) {
