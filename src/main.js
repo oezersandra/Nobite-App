@@ -172,7 +172,7 @@ function renderContent() {
           ${renderGoalCard()}
         </div>
         
-        ${state.relapseLog.length > 0 ? renderTriggerCard().outerHTML : ''}
+        ${renderTriggerCard()}
         
         <button class="reset-btn" onclick="resetTracker()">Ich habe gekaut (Tracker & Ziel zurücksetzen)</button>
       </div>
@@ -388,27 +388,25 @@ function analyzeTriggers() {
 
 function renderTriggerCard() {
   const analysis = analyzeTriggers();
-  const card = document.createElement('div');
-  card.className = 'goal-card trigger-card';
+  if (!analysis || analysis.count < 1) return "";
   
-  if (!analysis || analysis.count < 1) return card;
-  
-  card.innerHTML = `
-    <div class="goal-card-title">🔍 Trigger-Erkenntnis</div>
-    <div style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 15px;">
-      Basierend auf deinen Rückfällen ist deine kritische Zeit:
+  return `
+    <div class="goal-card trigger-card">
+      <div class="goal-card-title">🔍 Trigger-Erkenntnis</div>
+      <div style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 15px;">
+        Basierend auf deinen Rückfällen ist deine kritische Zeit:
+      </div>
+      <div style="font-size: 24px; font-weight: bold; color: #fbbf24; margin-bottom: 10px;">
+        ${analysis.label}s
+      </div>
+      <div style="font-size: 14px; color: var(--color-text-dim);">
+        Bleib in dieser Zeit besonders wachsam! Nutze dann öfter den "Drang"-Button.
+      </div>
+      <button class="urge-btn" style="margin-top: 15px; width: 100%; justify-content: center; background: rgba(251, 191, 36, 0.2); color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" onclick="window.requestNotificationPermission()">
+        Benachrichtigungen aktivieren
+      </button>
     </div>
-    <div style="font-size: 24px; font-weight: bold; color: #fbbf24; margin-bottom: 10px;">
-      ${analysis.label}s
-    </div>
-    <div style="font-size: 14px; color: var(--color-text-dim);">
-      Bleib in dieser Zeit besonders wachsam! Nutze dann öfter den "Drang"-Button.
-    </div>
-    <button class="urge-btn" style="margin-top: 15px; width: 100%; justify-content: center; background: rgba(251, 191, 36, 0.2); color: #fbbf24; border-color: rgba(251, 191, 36, 0.4);" onclick="requestNotificationPermission()">
-      Benachrichtigungen aktivieren
-    </button>
   `;
-  return card;
 }
 
 window.requestNotificationPermission = function() {
