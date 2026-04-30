@@ -30,6 +30,7 @@ let state = {
   theme: localStorage.getItem('theme') || 'default',
   activeAvatar: localStorage.getItem('activeAvatar') || 'plant',
   userAvatar: localStorage.getItem('userAvatar') || '👤',
+  moodHistory: JSON.parse(localStorage.getItem('moodHistory') || '[]'),
   showOnboarding: !localStorage.getItem('onboardingDone'),
   onboardingStep: 0
 };
@@ -378,7 +379,9 @@ function renderContent() {
         </button>
         
         <div id="goalContainer">
+          ${renderMoodTracker()}
           ${renderGoalCard()}
+          ${renderMoodChart()}
           ${state.isPremium ? renderTriggerCard() : `
             <div class="goal-card" style="opacity: 0.7; border-style: dashed; cursor: pointer;" onclick="switchView('profile')">
               <div style="font-size: 14px; text-align: center;">💎 Schalte <b>Intelligente Analyse</b> mit Premium frei!</div>
@@ -648,6 +651,74 @@ function analyzeTriggers() {
   else timeLabel = "Nacht";
   
   return { label: timeLabel, hour: maxHour, count: maxCount };
+}
+
+function renderMoodTracker() {
+  const today = new Date().toLocaleDateString();
+  const checkedIn = state.moodHistory.some(m => m.date === today);
+  
+  if (checkedIn) return ""; // Only show if not checked in yet today
+
+  return `
+    <div class="goal-card" style="background: rgba(255,255,255,0.03); text-align: center; border: 1px solid rgba(255,255,255,0.05);">
+      <h3 style="font-size: 15px; margin-bottom: 12px; color: var(--color-text);">Wie fühlst du dich heute?</h3>
+      <div style="display: flex; justify-content: space-between; gap: 8px;">
+        ${[
+          { emoji: '😌', level: 1 },
+          { emoji: '😐', level: 2 },
+          { emoji: '😟', level: 3 },
+          { emoji: '😫', level: 4 },
+          { emoji: '😡', level: 5 }
+        ].map(m => `
+          <button onclick="window.recordDailyMood(${m.level})" style="flex: 1; padding: 10px 0; border-radius: 12px; border: none; background: rgba(255,255,255,0.05); font-size: 20px; cursor: pointer; transition: 0.3s;">${m.emoji}</button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderMoodChart() {
+  if (state.moodHistory.length < 2) return ""; // Only show chart if we have at least 2 days
+
+  const last7Days = state.moodHistory.slice(-7);
+  const height = 60;
+  const width = 280;
+  const maxVal = 5;
+  const stepX = width / (last7Days.length - 1 || 1);
+
+  const points = last7Days.map((m, i) => {
+    const x = i * stepX;
+    const y = height - ((6 - m.mood) / maxVal * height);
+    return `${x},${y}`;
+  }).join(' ');
+
+  return `
+    <div class="goal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 14px; color: var(--color-text);">Stimmungs-Trend</h3>
+        <span style="font-size: 10px; color: var(--color-text-dim);">Letzte ${last7Days.length} Tage</span>
+      </div>
+      <div style="height: 80px; width: 100%; position: relative;">
+        <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="moodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color: var(--color-primary); stop-opacity: 0.2" />
+              <stop offset="100%" style="stop-color: var(--color-primary); stop-opacity: 0" />
+            </linearGradient>
+          </defs>
+          <path d="M 0 ${height} L ${points} L ${width} ${height} Z" fill="url(#moodGrad)" />
+          <polyline points="${points}" fill="none" stroke="var(--color-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          ${last7Days.map((m, i) => `
+            <circle cx="${i * stepX}" cy="${height - ((6 - m.mood) / maxVal * height)}" r="3" fill="white" stroke="var(--color-primary)" stroke-width="2" />
+          `).join('')}
+        </svg>
+        <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 9px; color: var(--color-text-dim);">
+          <span>😌 Ruhig</span>
+          <span>😡 Gestresst</span>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderTriggerCard() {
@@ -1539,6 +1610,28 @@ window.upgradeToPremium = function() {
     renderApp();
     showConfetti();
   }
+};
+
+window.recordDailyMood = function(moodLevel) {
+  const today = new Date().toLocaleDateString();
+  const existingIndex = state.moodHistory.findIndex(m => m.date === today);
+  
+  const entry = { date: today, mood: moodLevel };
+  
+  if (existingIndex > -1) {
+    state.moodHistory[existingIndex] = entry;
+  } else {
+    state.moodHistory.push(entry);
+  }
+  
+  // Keep only last 14 days
+  if (state.moodHistory.length > 14) {
+    state.moodHistory.shift();
+  }
+  
+  localStorage.setItem('moodHistory', JSON.stringify(state.moodHistory));
+  saveUserData();
+  renderApp();
 };
 
 window.setTheme = function(t) {
