@@ -19,7 +19,8 @@ let state = {
   urgeCountSinceRelapse: parseInt(localStorage.getItem('urgeCountSinceRelapse')) || 0,
   user: JSON.parse(localStorage.getItem('user') || 'null'),
   isPremium: localStorage.getItem('isPremium') === 'true',
-  theme: localStorage.getItem('theme') || 'default'
+  theme: localStorage.getItem('theme') || 'default',
+  activeAvatar: localStorage.getItem('activeAvatar') || 'plant'
 };
 
 const BADGES = [
@@ -311,39 +312,22 @@ function renderTipsView() {
 
 /* --- Nail Pal Game Logic --- */
 function renderNailPalView() {
-  const pal = getPalState();
+  const isPlant = state.activeAvatar === 'plant';
   const today = new Date().toLocaleDateString('de-DE');
   const canWater = state.lastWatered !== today;
   
-  let accessoryHTML = '';
-  if (state.activeAccessory) {
-    const item = SHOP_ITEMS.find(i => i.id === state.activeAccessory);
-    if (item) accessoryHTML = `<div class="pal-accessory">${item.icon}</div>`;
-  }
-
-  let quote = pal.quote;
-  if (canWater) {
-    quote = "Ich habe Durst... 💧";
-  }
-
   return `
-    <div class="nail-pal-container">
+    <div class="pal-container">
       <div class="pal-header">
         <div class="pal-drops">💧 ${state.palDrops} Tropfen</div>
       </div>
       
-      <div class="pal-character-wrapper" onclick="interactWithPal(this)">
-        <div class="pal-character pulse">${pal.icon}</div>
-        ${accessoryHTML}
+      <div class="pal-card" style="position: relative;">
+        ${isPlant ? renderPlantAvatar() : renderNailAvatar()}
       </div>
       
-      <div class="message-bubble" id="palBubble">
-        <div class="pal-status">${pal.status}</div>
-        <div class="pal-quote">"${quote}"</div>
-      </div>
-      
-      <button class="water-btn ${canWater ? '' : 'disabled'}" onclick="waterPal()" ${canWater ? '' : 'disabled'}>
-        ${canWater ? '💦 Pflanze gießen (+10 Tropfen)' : '✅ Für heute gegossen!'}
+      <button class="water-btn ${canWater ? '' : 'disabled'}" onclick="window.waterPal()" ${canWater ? '' : 'disabled'}>
+        ${canWater ? `💦 ${isPlant ? 'Pflanze gießen' : 'Nägel pflegen'} (+10 Tropfen)` : '✅ Für heute erledigt!'}
       </button>
 
       <div class="pal-shop">
@@ -377,6 +361,42 @@ function renderNailPalView() {
           }).join('')}
         </div>
       </div>
+    </div>
+  `;
+}
+
+function renderPlantAvatar() {
+  const pal = PAL_CONFIG[state.palLevel] || PAL_CONFIG[0];
+  const quote = PAL_QUOTES[Math.floor(Math.random() * PAL_QUOTES.length)];
+  return `
+    <div id="palBubble" onclick="window.interactWithPal(this)">
+      <div class="pal-icon">${pal.icon}</div>
+      <div class="pal-status">${pal.status}</div>
+      <div class="pal-quote">"${quote}"</div>
+    </div>
+  `;
+}
+
+function renderNailAvatar() {
+  const days = state.streakDays;
+  let status = "Stark bleiben!";
+  let nailClass = "bitten";
+  
+  if (days >= 1) { status = "Heilung beginnt..."; nailClass = "healing"; }
+  if (days >= 3) { status = "Wächst stetig!"; nailClass = "short"; }
+  if (days >= 7) { status = "Wunderschön!"; nailClass = "healthy"; }
+  if (days >= 14) { status = "Wow! Echte Prachtstücke."; nailClass = "perfect"; }
+
+  return `
+    <div class="nail-avatar-view">
+      <div class="hand-container ${nailClass}">
+        <div class="finger thumb"><div class="nail"></div></div>
+        <div class="finger"><div class="nail"></div></div>
+        <div class="finger main-finger"><div class="nail"></div></div>
+        <div class="finger"><div class="nail"></div></div>
+        <div class="finger"><div class="nail"></div></div>
+      </div>
+      <div class="pal-status">${status}</div>
     </div>
   `;
 }
@@ -1040,7 +1060,14 @@ function renderProfileView() {
         </div>
       ` : ''}
 
-      <div class="settings-list" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="settings-item" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start;">
+          <div style="font-weight: bold; font-size: 14px;">🎭 Avatar wählen</div>
+          <div style="display: flex; gap: 12px; width: 100%;">
+            <button onclick="window.setAvatar('plant')" style="flex: 1; padding: 12px; border-radius: 12px; border: 2px solid ${state.activeAvatar === 'plant' ? 'var(--color-primary)' : 'transparent'}; background: rgba(255,255,255,0.05); color: white;">🪴 Pflanze</button>
+            <button onclick="window.setAvatar('nail')" style="flex: 1; padding: 12px; border-radius: 12px; border: 2px solid ${state.activeAvatar === 'nail' ? 'var(--color-primary)' : 'transparent'}; background: rgba(255,255,255,0.05); color: white;">💅 Nägel</button>
+          </div>
+        </div>
+
         <div class="settings-item" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start;">
           <div style="font-weight: bold; font-size: 14px;">🎨 App-Design ${!state.isPremium ? '💎' : ''}</div>
           <div class="theme-selector" style="display: flex; gap: 8px; width: 100%;">
@@ -1178,6 +1205,12 @@ window.setTheme = function(t) {
   state.theme = t;
   localStorage.setItem('theme', t);
   applyTheme();
+  renderApp();
+};
+
+window.setAvatar = function(a) {
+  state.activeAvatar = a;
+  localStorage.setItem('activeAvatar', a);
   renderApp();
 };
 

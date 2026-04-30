@@ -1264,3 +1264,63 @@ body {
 .mood-btn:active {
   transform: scale(0.95);
 }
+
+/* --- Nail Avatar CSS --- */
+.nail-avatar-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+}
+
+.hand-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 150px;
+  padding-bottom: 20px;
+}
+
+.finger {
+  width: 24px;
+  height: 60px;
+  background: #ffdbac;
+  border-radius: 12px 12px 4px 4px;
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+.main-finger { height: 80px; }
+.thumb { height: 50px; transform: rotate(-15deg); margin-right: 10px; }
+
+.nail {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  background: #f8fafc;
+  border-radius: 4px 4px 1px 1px;
+  transition: all 0.5s ease;
+}
+
+/* Nail Growth Stages */
+.bitten .nail { height: 4px; background: #fda4af; border-bottom: 2px solid #ef4444; }
+.healing .nail { height: 6px; background: #fecaca; }
+.short .nail { height: 10px; background: #fff; }
+.healthy .nail { height: 16px; background: #fff; border-top: 3px solid rgba(255,255,255,0.8); }
+.perfect .nail { 
+  height: 22px; 
+  background: linear-gradient(to bottom, #fff, #f1f5f9); 
+  box-shadow: 0 0 10px rgba(255,255,255,0.5);
+  border-top: 4px solid #fff;
+}
+
+.perfect .nail::after {
+  content: '✨';
+  position: absolute;
+  top: -15px;
+  left: -5px;
+  font-size: 10px;
+  animation: pulse 2s infinite;
+}
