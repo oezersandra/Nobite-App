@@ -946,9 +946,6 @@ function renderAchievementsView() {
   `;
 }
 
-  `;
-}
-
 /* --- Profile & Auth Logic --- */
 function renderProfileView() {
   if (!state.user) {
