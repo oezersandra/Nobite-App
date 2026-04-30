@@ -221,7 +221,25 @@ function renderContent() {
           `}
         </div>
         
-        <button class="reset-btn" onclick="resetTracker()">Ich habe gekaut (Tracker & Ziel zurücksetzen)</button>
+        <button class="reset-btn" onclick="showMoodPicker()">Ich habe gekaut (Tracker & Ziel zurücksetzen)</button>
+      </div>
+
+      <!-- Mood Picker Modal -->
+      <div class="modal-overlay" id="moodModal">
+        <div class="modal">
+          <div class="modal-header">
+            <h3 class="modal-title">Wie hast du dich gefühlt?</h3>
+          </div>
+          <p style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 20px;">Stress ist oft ein Auslöser. Dein ehrliches Feedback hilft der Analyse.</p>
+          <div class="mood-selector" style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 24px;">
+            <button class="mood-btn" onclick="handleRelapse(1)">😌<br><span style="font-size: 10px;">Ruhig</span></button>
+            <button class="mood-btn" onclick="handleRelapse(2)">😐<br><span style="font-size: 10px;">Ok</span></button>
+            <button class="mood-btn" onclick="handleRelapse(3)">😟<br><span style="font-size: 10px;">Angst</span></button>
+            <button class="mood-btn" onclick="handleRelapse(4)">😫<br><span style="font-size: 10px;">Stress</span></button>
+            <button class="mood-btn" onclick="handleRelapse(5)">😡<br><span style="font-size: 10px;">Wut</span></button>
+          </div>
+          <button class="close-btn" style="position: static; width: 100%; font-size: 14px;" onclick="document.getElementById('moodModal').classList.remove('active')">Abbrechen</button>
+        </div>
       </div>
     `;
     document.querySelector('#urgeBtn').addEventListener('click', () => {
@@ -446,29 +464,25 @@ function renderTriggerCard() {
   const analysis = analyzeTriggers();
   if (!analysis || analysis.count < 1) return "";
   
-  const isEnabled = ("Notification" in window) && Notification.permission === "granted";
-  
+  const avgMood = state.relapseLog.reduce((acc, log) => acc + (log.mood || 3), 0) / state.relapseLog.length;
+  const moodTexts = ["Ruhig", "Entspannt", "Neutral", "Angespannt", "Sehr gestresst"];
+  const moodDesc = moodTexts[Math.round(avgMood) - 1] || "Neutral";
+
   return `
     <div class="goal-card trigger-card">
-      <div class="goal-card-title">
-        🔍 Trigger-Erkenntnis
-        <span style="font-size: 12px; font-weight: normal; float: right; cursor: pointer; opacity: 0.6;" onclick="window.resetTriggers()">Zurücksetzen</span>
+      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--color-primary); font-weight: bold; margin-bottom: 8px;">
+        KI-Analyse (Premium)
       </div>
-      <div style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 15px;">
-        Basierend auf deinen Rückfällen ist deine kritische Zeit:
+      <div style="font-size: 14px; margin-bottom: 12px;">
+        Deine kritischste Zeit ist gegen <b>${analysis.hour}:00 Uhr</b>.
       </div>
-      <div style="font-size: 24px; font-weight: bold; color: #fbbf24; margin-bottom: 10px;">
-        ${analysis.label}s
+      <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;">
+        <div style="font-size: 24px;">🧠</div>
+        <div style="text-align: left;">
+          <div style="font-size: 11px; color: var(--color-text-dim);">Hauptauslöser (Stimmung)</div>
+          <div style="font-size: 14px; font-weight: bold;">${moodDesc}</div>
+        </div>
       </div>
-      <div style="font-size: 14px; color: var(--color-text-dim);">
-        Bleib in dieser Zeit besonders wachsam! Nutze dann öfter den "Drang"-Button.
-      </div>
-      ${isEnabled ? 
-        `<div style="margin-top: 15px; color: #10b981; font-weight: bold; text-align: center;">✅ Benachrichtigungen aktiv</div>` :
-        `<button class="finish-btn" style="margin-top: 15px; width: 100%; background: #fbbf24; color: #000;" onclick="window.requestNotificationPermission()">
-          Warnungen einschalten
-        </button>`
-      }
     </div>
   `;
 }
@@ -878,31 +892,34 @@ window.resetGoal = function() {
   renderApp();
 };
 
-window.resetTracker = function() {
-  if (confirm("Bist du sicher? Dies setzt deinen Fortschritt und dein aktuelles Ziel auf 0 zurück.")) {
-    state.lastBite = new Date();
-    localStorage.setItem('lastBite', state.lastBite.toISOString());
-    state.streakDays = 0;
-    state.streakHours = 0;
-    
-    // Log the relapse for trigger analysis
-    state.relapseLog.push({
-      timestamp: new Date().toISOString(),
-      day: state.streakDays
-    });
-    localStorage.setItem('relapseLog', JSON.stringify(state.relapseLog));
-    
-    // Also reset goal
-    state.targetReward = null;
-    state.targetDays = 0;
-    state.urgeCountSinceRelapse = 0;
-    localStorage.removeItem('targetReward');
-    localStorage.removeItem('targetDays');
-    localStorage.setItem('urgeCountSinceRelapse', '0');
-    
-    renderApp();
-  }
+window.showMoodPicker = function() {
+  document.getElementById('moodModal').classList.add('active');
 };
+
+window.handleRelapse = function(moodLevel) {
+  document.getElementById('moodModal').classList.remove('active');
+  
+  state.streakDays = 0;
+  state.streakHours = 0;
+  state.startTime = new Date().toISOString();
+  state.urgeCountSinceRelapse = 0;
+  
+  const relapse = {
+    timestamp: new Date().toISOString(),
+    mood: moodLevel
+  };
+  state.relapseLog.push(relapse);
+  
+  localStorage.setItem('startTime', state.startTime);
+  localStorage.setItem('relapseLog', JSON.stringify(state.relapseLog));
+  localStorage.setItem('urgeCountSinceRelapse', '0');
+  
+  calculateStreak();
+  checkAchievements();
+  renderApp();
+};
+
+
 
 /* --- Achievements Logic --- */
 function checkAchievements() {
@@ -1041,7 +1058,28 @@ function renderProfileView() {
           <span>💡 Tipps & Tricks</span>
           <span style="opacity: 0.5;">➜</span>
         </div>
-        <div class="settings-item" onclick="window.logout()" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+
+        <div class="leaderboard-section" style="margin-top: 20px; text-align: left;">
+          <h3 style="font-size: 16px; margin-bottom: 12px;">🌍 Community Leaderboard</h3>
+          <div style="background: var(--color-surface); border-radius: 20px; overflow: hidden; border: 1px solid var(--glass-border);">
+            ${[
+              { name: 'NailNinja', streak: '42 Tage', icon: '🏆' },
+              { name: 'StopBiting99', streak: '18 Tage', icon: '🥈' },
+              { name: 'Du (Gast)', streak: state.streakDays + ' Tage', icon: '🥉', current: true },
+              { name: 'PeaceLover', streak: '5 Tage', icon: '🌱' }
+            ].map(user => `
+              <div style="padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; background: ${user.current ? 'rgba(16, 185, 129, 0.1)' : 'transparent'}; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span style="font-size: 18px;">${user.icon}</span>
+                  <span style="${user.current ? 'font-weight: bold; color: var(--color-primary);' : ''}">${user.name}</span>
+                </div>
+                <div style="font-size: 13px; color: var(--color-text-dim);">${user.streak}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="settings-item" onclick="window.logout()" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-top: 12px;">
           <span style="color: #ef4444;">Abmelden</span>
           <span style="color: #ef4444; opacity: 0.5;">➜</span>
         </div>
