@@ -1201,3 +1201,43 @@ body {
   line-height: 1.5;
   margin-bottom: 16px;
 }
+
+/* --- Profile & Auth View --- */
+.profile-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: floatUp 0.5s ease-out;
+}
+
+.auth-card {
+  background: var(--color-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: 32px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.auth-tab-btn.active {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+  font-weight: bold;
+}
+
+.auth-form {
+  margin-top: 20px;
+}
+
+.premium-card {
+  box-shadow: 0 10px 30px rgba(251, 191, 36, 0.3);
+}
+
+.user-status.premium {
+  color: #fbbf24;
+}
+
+.settings-item:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.05);
+}

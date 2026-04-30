@@ -16,7 +16,9 @@ let state = {
   activeAccessory: localStorage.getItem('activeAccessory') || null,
   relapseLog: JSON.parse(localStorage.getItem('relapseLog') || '[]'),
   unlockedBadges: JSON.parse(localStorage.getItem('unlockedBadges') || '[]'),
-  urgeCountSinceRelapse: parseInt(localStorage.getItem('urgeCountSinceRelapse')) || 0
+  urgeCountSinceRelapse: parseInt(localStorage.getItem('urgeCountSinceRelapse')) || 0,
+  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  isPremium: localStorage.getItem('isPremium') === 'true'
 };
 
 const BADGES = [
@@ -90,9 +92,9 @@ function renderApp() {
         <div class="nav-icon">🏆</div>
         <span>Erfolge</span>
       </div>
-      <div class="nav-item ${state.currentView === 'tips' ? 'active' : ''}" onclick="switchView('tips')">
-        <div class="nav-icon">💡</div>
-        <span>Tipps</span>
+      <div class="nav-item ${state.currentView === 'profile' ? 'active' : ''}" onclick="switchView('profile')">
+        <div class="nav-icon">👤</div>
+        <span>Profil</span>
       </div>
     </nav>
 
@@ -233,8 +235,8 @@ function renderContent() {
     container.innerHTML = renderNailPalView();
   } else if (state.currentView === 'achievements') {
     container.innerHTML = renderAchievementsView();
-  } else if (state.currentView === 'tips') {
-    container.innerHTML = renderTipsView();
+  } else if (state.currentView === 'profile') {
+    container.innerHTML = renderProfileView();
   }
 }
 
@@ -943,6 +945,160 @@ function renderAchievementsView() {
     </div>
   `;
 }
+
+  `;
+}
+
+/* --- Profile & Auth Logic --- */
+function renderProfileView() {
+  if (!state.user) {
+    return `
+      <div class="profile-container">
+        <div class="auth-card">
+          <h2 style="margin-bottom: 10px;">Willkommen bei Nobite! 🌿</h2>
+          <p style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 24px;">Erstelle ein Konto, um deine Fortschritte zu sichern und Premium-Features freizuschalten.</p>
+          
+          <div class="auth-tabs" style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 12px;">
+            <button class="auth-tab-btn active" id="loginTabBtn" onclick="window.showAuthForm('login')" style="flex: 1; padding: 10px; border: none; border-radius: 8px; background: transparent; color: white; cursor: pointer; transition: 0.3s;">Login</button>
+            <button class="auth-tab-btn" id="registerTabBtn" onclick="window.showAuthForm('register')" style="flex: 1; padding: 10px; border: none; border-radius: 8px; background: transparent; color: var(--color-text-dim); cursor: pointer; transition: 0.3s;">Registrieren</button>
+          </div>
+          
+          <div id="authFormContainer">
+            ${renderLoginForm()}
+          </div>
+        </div>
+        
+        <div class="premium-teaser" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05)); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 20px;">
+          <h3 style="color: #fbbf24; margin-bottom: 10px;">💎 Warum Premium?</h3>
+          <ul style="text-align: left; margin: 10px 0; font-size: 13px; color: var(--color-text-dim); list-style: none; padding: 0;">
+            <li style="margin-bottom: 6px;">✨ Exklusive Nail Pal Accessoires</li>
+            <li style="margin-bottom: 6px;">📊 Erweiterte Rückfall-Analysen</li>
+            <li style="margin-bottom: 6px;">☁️ Cloud-Backup deiner Daten</li>
+            <li>💖 Unterstütze die Weiterentwicklung</li>
+          </ul>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="profile-container">
+      <div class="user-header" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 20px; background: var(--color-surface); border-radius: 24px; border: 1px solid var(--glass-border);">
+        <div class="user-avatar" style="font-size: 40px; background: rgba(255,255,255,0.1); width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">👤</div>
+        <div class="user-info" style="text-align: left;">
+          <div class="user-email" style="font-weight: bold; font-size: 18px;">${state.user.email}</div>
+          <div class="user-status" style="font-size: 12px; margin-top: 4px; color: ${state.isPremium ? '#fbbf24' : 'var(--color-text-dim)'}; font-weight: bold;">
+            ${state.isPremium ? '💎 Premium Mitglied' : 'Kostenloser Account'}
+          </div>
+        </div>
+      </div>
+
+      ${!state.isPremium ? `
+        <div class="premium-card" style="padding: 24px; background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; border-radius: 24px; text-align: left; margin-bottom: 24px;">
+          <h3 style="margin-bottom: 8px;">Hol dir Nobite Premium! 💎</h3>
+          <p style="font-size: 14px; opacity: 0.9; margin-bottom: 16px;">Schalte alle Accessoires und Analysen frei und unterstütze uns.</p>
+          <button class="finish-btn" style="width: 100%; background: #000; color: #fff; border: none;" onclick="window.upgradeToPremium()">Jetzt upgraden</button>
+        </div>
+      ` : ''}
+
+      <div class="settings-list" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="settings-item" onclick="switchView('tips')" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+          <span>💡 Tipps & Tricks</span>
+          <span style="opacity: 0.5;">➜</span>
+        </div>
+        <div class="settings-item" onclick="window.logout()" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+          <span style="color: #ef4444;">Abmelden</span>
+          <span style="color: #ef4444; opacity: 0.5;">➜</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+window.showAuthForm = function(type) {
+  const container = document.getElementById('authFormContainer');
+  const loginBtn = document.getElementById('loginTabBtn');
+  const registerBtn = document.getElementById('registerTabBtn');
+  
+  if (type === 'login') {
+    container.innerHTML = renderLoginForm();
+    loginBtn.style.background = 'rgba(255,255,255,0.1)';
+    loginBtn.style.color = 'white';
+    registerBtn.style.background = 'transparent';
+    registerBtn.style.color = 'var(--color-text-dim)';
+  } else {
+    container.innerHTML = renderRegisterForm();
+    registerBtn.style.background = 'rgba(255,255,255,0.1)';
+    registerBtn.style.color = 'white';
+    loginBtn.style.background = 'transparent';
+    loginBtn.style.color = 'var(--color-text-dim)';
+  }
+};
+
+function renderLoginForm() {
+  return `
+    <div class="auth-form" style="display: flex; flex-direction: column; gap: 12px;">
+      <input type="email" id="loginEmail" placeholder="E-Mail" class="goal-input" style="width: 100%;">
+      <input type="password" id="loginPass" placeholder="Passwort" class="goal-input" style="width: 100%;">
+      <button class="finish-btn" style="width: 100%; margin-top: 8px;" onclick="window.handleLogin()">Einloggen</button>
+    </div>
+  `;
+}
+
+function renderRegisterForm() {
+  return `
+    <div class="auth-form" style="display: flex; flex-direction: column; gap: 12px;">
+      <input type="email" id="regEmail" placeholder="E-Mail" class="goal-input" style="width: 100%;">
+      <input type="password" id="regPass" placeholder="Passwort" class="goal-input" style="width: 100%;">
+      <button class="finish-btn" style="width: 100%; margin-top: 8px;" onclick="window.handleRegister()">Konto erstellen</button>
+    </div>
+  `;
+}
+
+window.handleLogin = function() {
+  const email = document.getElementById('loginEmail').value;
+  const pass = document.getElementById('loginPass').value;
+  
+  if (email && pass) {
+    state.user = { email: email };
+    localStorage.setItem('user', JSON.stringify(state.user));
+    renderApp();
+  } else {
+    alert("Bitte fülle alle Felder aus.");
+  }
+};
+
+window.handleRegister = function() {
+  const email = document.getElementById('regEmail').value;
+  const pass = document.getElementById('regPass').value;
+  
+  if (email && pass) {
+    state.user = { email: email };
+    localStorage.setItem('user', JSON.stringify(state.user));
+    renderApp();
+  } else {
+    alert("Bitte fülle alle Felder aus.");
+  }
+};
+
+window.logout = function() {
+  if (confirm("Möchtest du dich wirklich abmelden?")) {
+    state.user = null;
+    state.isPremium = false;
+    localStorage.removeItem('user');
+    localStorage.setItem('isPremium', 'false');
+    renderApp();
+  }
+};
+
+window.upgradeToPremium = function() {
+  if (confirm("Möchtest du für 4,99€ auf Premium upgraden? (Simulation)")) {
+    state.isPremium = true;
+    localStorage.setItem('isPremium', 'true');
+    renderApp();
+    showConfetti();
+  }
+};
 
 function showConfetti() {
   const emojis = ['🎉', '✨', '🏆', '💎', '🌸'];
