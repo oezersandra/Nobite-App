@@ -1,4 +1,5 @@
 import './style.css'
+import { supabase } from './supabase.js'
 
 // Initial State
 let state = {
@@ -23,6 +24,81 @@ let state = {
   activeAvatar: localStorage.getItem('activeAvatar') || 'plant',
   userAvatar: localStorage.getItem('userAvatar') || '👤'
 };
+
+// --- Supabase Backend Sync ---
+async function saveUserData() {
+  if (!state.user) return;
+  
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: state.user.id,
+      email: state.user.email,
+      streak_days: state.streakDays,
+      pal_drops: state.palDrops,
+      pal_inventory: state.palInventory,
+      relapse_log: state.relapseLog,
+      is_premium: state.isPremium,
+      theme: state.theme,
+      active_avatar: state.activeAvatar,
+      user_avatar: state.userAvatar,
+      target_reward: state.targetReward,
+      target_days: state.targetDays,
+      last_bite: state.lastBite.toISOString()
+    });
+
+  if (error) console.error('Fehler beim Speichern:', error);
+}
+
+async function loadUserData() {
+  if (!state.user) return;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Fehler beim Laden:', error);
+    return;
+  }
+
+  if (data) {
+    state.streakDays = data.streak_days;
+    state.palDrops = data.pal_drops;
+    state.palInventory = data.pal_inventory || [];
+    state.relapseLog = data.relapse_log || [];
+    state.isPremium = data.is_premium;
+    state.theme = data.theme || 'default';
+    state.activeAvatar = data.active_avatar || 'plant';
+    state.userAvatar = data.user_avatar || '👤';
+    state.targetReward = data.target_reward;
+    state.targetDays = data.target_days;
+    state.lastBite = new Date(data.last_bite);
+    
+    // Update LocalStorage as backup
+    localStorage.setItem('palDrops', state.palDrops);
+    localStorage.setItem('palInventory', JSON.stringify(state.palInventory));
+    localStorage.setItem('isPremium', state.isPremium);
+    localStorage.setItem('theme', state.theme);
+    
+    applyTheme();
+    renderApp();
+  }
+}
+
+// Check for existing session on startup
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    state.user = session.user;
+    localStorage.setItem('user', JSON.stringify(session.user));
+    loadUserData();
+  } else {
+    state.user = null;
+    localStorage.removeItem('user');
+  }
+  renderApp();
+});
 
 const BADGES = [
   { id: 'first_day', icon: '🌱', title: 'Erster Schritt', desc: '24 Stunden geschafft!', criteria: (s) => s.streakDays >= 1 },
@@ -1244,38 +1320,57 @@ function renderRegisterForm() {
   `;
 }
 
-window.handleLogin = function() {
-  const email = document.getElementById('loginEmail').value;
-  const pass = document.getElementById('loginPass').value;
-  
-  if (email && pass) {
-    state.user = { email: email };
-    localStorage.setItem('user', JSON.stringify(state.user));
-    renderApp();
+window.handleLogin = async function() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPass').value;
+
+  if (!email || !password) {
+    alert("Bitte gib E-Mail und Passwort ein.");
+    return;
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    alert("Login fehlgeschlagen: " + error.message);
   } else {
-    alert("Bitte fülle alle Felder aus.");
+    console.log("Eingeloggt:", data.user);
+    renderApp();
   }
 };
 
-window.handleRegister = function() {
-  const email = document.getElementById('regEmail').value;
-  const pass = document.getElementById('regPass').value;
-  
-  if (email && pass) {
-    state.user = { email: email };
-    localStorage.setItem('user', JSON.stringify(state.user));
-    renderApp();
+window.handleRegister = async function() {
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPass').value;
+
+  if (!email || !password) {
+    alert("Bitte gib E-Mail und Passwort ein.");
+    return;
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password
+  });
+
+  if (error) {
+    alert("Registrierung fehlgeschlagen: " + error.message);
   } else {
-    alert("Bitte fülle alle Felder aus.");
+    alert("Erfolg! Bitte überprüfe deine E-Mails, um dein Konto zu bestätigen.");
+    console.log("Registriert:", data.user);
   }
 };
 
-window.logout = function() {
-  if (confirm("Möchtest du dich wirklich abmelden?")) {
+window.handleLogout = async function() {
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    alert("Logout fehlgeschlagen: " + error.message);
+  } else {
     state.user = null;
-    state.isPremium = false;
     localStorage.removeItem('user');
-    localStorage.setItem('isPremium', 'false');
     renderApp();
   }
 };
