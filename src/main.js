@@ -277,6 +277,8 @@ function renderContent() {
     container.innerHTML = renderAchievementsView();
   } else if (state.currentView === 'profile') {
     container.innerHTML = renderProfileView();
+  } else if (state.currentView === 'tips') {
+    container.innerHTML = renderTipsView();
   }
 }
 
@@ -292,7 +294,10 @@ function renderTipsView() {
 
   return `
     <div class="tips-container">
-      <h2 class="tips-title">Hilfreiche Tipps & Tricks</h2>
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+        <button onclick="window.switchView('profile')" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 12px; border-radius: 12px; cursor: pointer;">←</button>
+        <h2 class="tips-title" style="margin-bottom: 0;">Tipps & Tricks</h2>
+      </div>
       <p class="tips-subtitle">Kleine Veränderungen im Alltag machen einen großen Unterschied.</p>
       
       <div class="tips-list">
