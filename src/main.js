@@ -18,7 +18,8 @@ let state = {
   unlockedBadges: JSON.parse(localStorage.getItem('unlockedBadges') || '[]'),
   urgeCountSinceRelapse: parseInt(localStorage.getItem('urgeCountSinceRelapse')) || 0,
   user: JSON.parse(localStorage.getItem('user') || 'null'),
-  isPremium: localStorage.getItem('isPremium') === 'true'
+  isPremium: localStorage.getItem('isPremium') === 'true',
+  theme: localStorage.getItem('theme') || 'default'
 };
 
 const BADGES = [
@@ -165,6 +166,21 @@ function initSwipeGestures() {
       prevPhoto(); // Swipe right
     }
   }
+}
+
+function applyTheme() {
+  const root = document.documentElement;
+  const themes = {
+    default: { primary: '#10b981', secondary: '#34d399', bg: '#064e3b' },
+    ocean: { primary: '#0ea5e9', secondary: '#38bdf8', bg: '#0c4a6e' },
+    sunset: { primary: '#f43f5e', secondary: '#fb7185', bg: '#881337' },
+    forest: { primary: '#65a30d', secondary: '#a3e635', bg: '#14532d' }
+  };
+  
+  const t = themes[state.theme] || themes.default;
+  root.style.setProperty('--color-primary', t.primary);
+  root.style.setProperty('--color-secondary', t.secondary);
+  root.style.setProperty('--color-bg', t.bg);
 }
 
 window.switchView = function(view) {
@@ -1008,6 +1024,19 @@ function renderProfileView() {
       ` : ''}
 
       <div class="settings-list" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="settings-item" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start;">
+          <div style="font-weight: bold; font-size: 14px;">🎨 App-Design ${!state.isPremium ? '💎' : ''}</div>
+          <div class="theme-selector" style="display: flex; gap: 8px; width: 100%;">
+            ${['default', 'ocean', 'sunset', 'forest'].map(t => `
+              <div onclick="${state.isPremium ? `setTheme('${t}')` : `switchView('profile')`}" 
+                   style="flex: 1; height: 32px; border-radius: 8px; cursor: pointer; border: 2px solid ${state.theme === t ? 'white' : 'transparent'}; 
+                          background: ${t === 'default' ? '#10b981' : t === 'ocean' ? '#0ea5e9' : t === 'sunset' ? '#f43f5e' : '#65a30d'}">
+              </div>
+            `).join('')}
+          </div>
+          ${!state.isPremium ? '<div style="font-size: 10px; color: #fbbf24;">Nur für Premium-Mitglieder</div>' : ''}
+        </div>
+
         <div class="settings-item" onclick="switchView('tips')" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
           <span>💡 Tipps & Tricks</span>
           <span style="opacity: 0.5;">➜</span>
@@ -1101,9 +1130,17 @@ window.upgradeToPremium = function() {
   if (confirm("Möchtest du für 4,99€ auf Premium upgraden? (Simulation)")) {
     state.isPremium = true;
     localStorage.setItem('isPremium', 'true');
+    applyTheme();
     renderApp();
     showConfetti();
   }
+};
+
+window.setTheme = function(t) {
+  state.theme = t;
+  localStorage.setItem('theme', t);
+  applyTheme();
+  renderApp();
 };
 
 function showConfetti() {
@@ -1152,6 +1189,7 @@ function prevPhoto() {
 // Initial render
 calculateStreak();
 checkAchievements();
+applyTheme();
 renderApp();
 
 function renderLightboxContent() {
