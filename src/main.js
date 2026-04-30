@@ -37,10 +37,10 @@ const BADGES = [
 ];
 
 const SHOP_ITEMS = [
-  { id: 'bow', icon: '🎀', name: 'Schleife', price: 10 },
-  { id: 'glasses', icon: '🕶️', name: 'Sonnenbrille', price: 30 },
-  { id: 'hat', icon: '🎩', name: 'Zylinder', price: 50 },
-  { id: 'party', icon: '🎉', name: 'Partyhut', price: 100 }
+  { id: 'bow', icon: '🎀', name: 'Schleife', price: 10, premium: false },
+  { id: 'glasses', icon: '🕶️', name: 'Sonnenbrille', price: 30, premium: true },
+  { id: 'hat', icon: '🎩', name: 'Zylinder', price: 50, premium: true },
+  { id: 'party', icon: '🎉', name: 'Partyhut', price: 100, premium: true }
 ];
 
 const PAL_CONFIG = [
@@ -198,6 +198,11 @@ function renderContent() {
         
         <div id="goalContainer">
           ${renderGoalCard()}
+          ${state.isPremium ? renderTriggerCard() : `
+            <div class="goal-card" style="opacity: 0.7; border-style: dashed; cursor: pointer;" onclick="switchView('profile')">
+              <div style="font-size: 14px; text-align: center;">💎 Schalte <b>Intelligente Analyse</b> mit Premium frei!</div>
+            </div>
+          `}
         </div>
         
         <button class="reset-btn" onclick="resetTracker()">Ich habe gekaut (Tracker & Ziel zurücksetzen)</button>
@@ -316,8 +321,12 @@ function renderNailPalView() {
             
             let btnHTML = '';
             if (!owned) {
-              const canAfford = state.palDrops >= item.price;
-              btnHTML = `<button class="shop-btn buy-btn" onclick="buyItem('${item.id}', ${item.price})" ${canAfford ? '' : 'disabled'}>${item.price} 💧</button>`;
+              if (item.premium && !state.isPremium) {
+                btnHTML = `<button class="shop-btn disabled" onclick="switchView('profile')" style="background: #fbbf24; color: #000; font-size: 9px;">💎 Premium</button>`;
+              } else {
+                const canAfford = state.palDrops >= item.price;
+                btnHTML = `<button class="shop-btn buy-btn" onclick="buyItem('${item.id}', ${item.price})" ${canAfford ? '' : 'disabled'}>${item.price} 💧</button>`;
+              }
             } else if (equipped) {
               btnHTML = `<button class="shop-btn equip-btn active" onclick="equipItem('${item.id}')">Trägt es</button>`;
             } else {
