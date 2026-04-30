@@ -1,6 +1,13 @@
 import './style.css'
 import { supabase } from './supabase.js'
 
+// Register Service Worker for PWA/Push
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(reg => console.log('Service Worker registered', reg))
+    .catch(err => console.log('Service Worker not registered', err));
+}
+
 // Initial State
 let state = {
   currentView: 'dashboard', 
@@ -492,8 +499,7 @@ window.waterPal = function() {
     state.lastWatered = today;
     localStorage.setItem('palDrops', state.palDrops);
     localStorage.setItem('lastWatered', state.lastWatered);
-    showFloatingHearts();
-    checkAchievements();
+    saveUserData();
     renderApp();
   }
 };
@@ -519,7 +525,7 @@ window.buyItem = function(id, price) {
     state.palInventory.push(id);
     localStorage.setItem('palDrops', state.palDrops);
     localStorage.setItem('palInventory', JSON.stringify(state.palInventory));
-    checkAchievements();
+    saveUserData();
     renderApp();
   }
 };
@@ -566,7 +572,19 @@ function analyzeTriggers() {
 
 function renderTriggerCard() {
   const analysis = analyzeTriggers();
-  if (!analysis || analysis.count < 1) return "";
+  
+  if (!analysis || analysis.count < 1) {
+    return `
+      <div class="goal-card trigger-card" style="opacity: 0.8; border: 1px dashed var(--glass-border);">
+        <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--color-primary); font-weight: bold; margin-bottom: 8px;">
+          KI-Analyse (Premium)
+        </div>
+        <div style="font-size: 14px; color: var(--color-text-dim); text-align: center; padding: 10px 0;">
+          Noch nicht genügend Daten für eine Analyse. 📊 Tracke deine Rückfälle, um Muster zu erkennen.
+        </div>
+      </div>
+    `;
+  }
   
   const avgMood = state.relapseLog.reduce((acc, log) => acc + (log.mood || 3), 0) / state.relapseLog.length;
   const moodTexts = ["Ruhig", "Entspannt", "Neutral", "Angespannt", "Sehr gestresst"];
@@ -617,10 +635,20 @@ window.requestNotificationPermission = function() {
   
   Notification.requestPermission().then(permission => {
     if (permission === "granted") {
-      new Notification("Nobite", {
-        body: "Super! Ich werde dich vor deinen kritischen Zeiten warnen.",
-        icon: "/vite.svg"
-      });
+      // Use Service Worker if available
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification("Nobite", {
+            body: "Super! Ich werde dich vor deinen kritischen Zeiten warnen.",
+            icon: "./icon.png"
+          });
+        });
+      } else {
+        new Notification("Nobite", {
+          body: "Super! Ich werde dich vor deinen kritischen Zeiten warnen.",
+          icon: "./icon.png"
+        });
+      }
     } else {
       alert("Benachrichtigungen wurden nicht erlaubt.");
     }
@@ -662,10 +690,19 @@ function checkTriggerNotifications() {
     const today = new Date().toLocaleDateString();
     
     if (lastNotified !== today) {
-      new Notification("Achtung: Gefahrenzeit!", {
-        body: `Deine kritische Zeit (${analysis.label}) beginnt bald. Sei wachsam! 🧘`,
-        icon: "/vite.svg"
-      });
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification("Achtung: Gefahrenzeit!", {
+            body: `Deine kritische Zeit (${analysis.label}) beginnt bald. Sei wachsam! 🧘`,
+            icon: "./icon.png"
+          });
+        });
+      } else {
+        new Notification("Achtung: Gefahrenzeit!", {
+          body: `Deine kritische Zeit (${analysis.label}) beginnt bald. Sei wachsam! 🧘`,
+          icon: "./icon.png"
+        });
+      }
       localStorage.setItem('lastTriggerNotify', today);
     }
   }
@@ -1018,6 +1055,7 @@ window.handleRelapse = function(moodLevel) {
   localStorage.setItem('relapseLog', JSON.stringify(state.relapseLog));
   localStorage.setItem('urgeCountSinceRelapse', '0');
   
+  saveUserData();
   calculateStreak();
   checkAchievements();
   renderApp();
@@ -1379,6 +1417,7 @@ window.upgradeToPremium = function() {
   if (confirm("Möchtest du für 4,99€ auf Premium upgraden? (Simulation)")) {
     state.isPremium = true;
     localStorage.setItem('isPremium', 'true');
+    saveUserData(); // Sync mit Backend
     applyTheme();
     renderApp();
     showConfetti();
@@ -1388,6 +1427,7 @@ window.upgradeToPremium = function() {
 window.setTheme = function(t) {
   state.theme = t;
   localStorage.setItem('theme', t);
+  saveUserData();
   applyTheme();
   renderApp();
 };
@@ -1395,6 +1435,7 @@ window.setTheme = function(t) {
 window.setAvatar = function(a) {
   state.activeAvatar = a;
   localStorage.setItem('activeAvatar', a);
+  saveUserData();
   renderApp();
 };
 
@@ -1405,6 +1446,7 @@ window.openAvatarModal = function() {
 window.setUserAvatar = function(icon) {
   state.userAvatar = icon;
   localStorage.setItem('userAvatar', icon);
+  saveUserData();
   document.getElementById('avatarModal').classList.remove('active');
   renderApp();
 };
