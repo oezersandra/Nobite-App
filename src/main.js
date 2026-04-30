@@ -1228,6 +1228,11 @@ function renderProfileView() {
           <span style="opacity: 0.5;">➜</span>
         </div>
 
+        <div class="settings-item" onclick="window.requestNotificationPermission()" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+          <span>🔔 Benachrichtigungen aktivieren</span>
+          <span style="opacity: 0.5;">➜</span>
+        </div>
+
         <div class="leaderboard-section" style="margin-top: 20px; text-align: left;">
           <h3 style="font-size: 16px; margin-bottom: 12px;">🌍 Community Leaderboard</h3>
           <div style="background: var(--color-surface); border-radius: 20px; overflow: hidden; border: 1px solid var(--glass-border);">
