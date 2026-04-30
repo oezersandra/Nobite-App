@@ -20,7 +20,8 @@ let state = {
   user: JSON.parse(localStorage.getItem('user') || 'null'),
   isPremium: localStorage.getItem('isPremium') === 'true',
   theme: localStorage.getItem('theme') || 'default',
-  activeAvatar: localStorage.getItem('activeAvatar') || 'plant'
+  activeAvatar: localStorage.getItem('activeAvatar') || 'plant',
+  userAvatar: localStorage.getItem('userAvatar') || '👤'
 };
 
 const BADGES = [
@@ -1048,11 +1049,31 @@ function renderProfileView() {
   return `
     <div class="profile-container">
       <div class="user-header" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 20px; background: var(--color-surface); border-radius: 24px; border: 1px solid var(--glass-border);">
-        <div class="user-avatar" style="font-size: 40px; background: rgba(255,255,255,0.1); width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">👤</div>
+        <div class="user-avatar" onclick="window.openAvatarModal()" style="font-size: 40px; background: rgba(255,255,255,0.1); width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; position: relative;">
+          ${state.userAvatar}
+          <div style="position: absolute; bottom: 0; right: 0; background: var(--color-primary); font-size: 10px; padding: 4px; border-radius: 50%;">✏️</div>
+        </div>
         <div class="user-info" style="text-align: left;">
           <div class="user-email" style="font-weight: bold; font-size: 18px;">${state.user.email}</div>
           <div class="user-status" style="font-size: 12px; margin-top: 4px; color: ${state.isPremium ? '#fbbf24' : 'var(--color-text-dim)'}; font-weight: bold;">
             ${state.isPremium ? '💎 Premium Mitglied' : 'Kostenloser Account'}
+          </div>
+        </div>
+      </div>
+
+      <!-- Avatar Modal -->
+      <div class="modal-overlay" id="avatarModal">
+        <div class="modal">
+          <div class="modal-header">
+            <h3 class="modal-title">Wähle dein Profilbild</h3>
+            <button class="close-btn" onclick="document.getElementById('avatarModal').classList.remove('active')">&times;</button>
+          </div>
+          <div class="avatar-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px;">
+            ${['👤', '🦊', '🐱', '🐶', '🦄', '🦁', '🐼', '🐨', '🐸', '💅', '🪴', '✨', '🍀', '🍎', '🍓', '🥑'].map(icon => `
+              <div onclick="window.setUserAvatar('${icon}')" style="font-size: 32px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 15px; cursor: pointer; text-align: center; border: 2px solid ${state.userAvatar === icon ? 'var(--color-primary)' : 'transparent'};">
+                ${icon}
+              </div>
+            `).join('')}
           </div>
         </div>
       </div>
@@ -1216,6 +1237,17 @@ window.setTheme = function(t) {
 window.setAvatar = function(a) {
   state.activeAvatar = a;
   localStorage.setItem('activeAvatar', a);
+  renderApp();
+};
+
+window.openAvatarModal = function() {
+  document.getElementById('avatarModal').classList.add('active');
+};
+
+window.setUserAvatar = function(icon) {
+  state.userAvatar = icon;
+  localStorage.setItem('userAvatar', icon);
+  document.getElementById('avatarModal').classList.remove('active');
   renderApp();
 };
 
