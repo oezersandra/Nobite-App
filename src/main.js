@@ -280,6 +280,8 @@ function renderContent() {
     container.innerHTML = renderProfileView();
   } else if (state.currentView === 'tips') {
     container.innerHTML = renderTipsView();
+  } else if (state.currentView === 'legal') {
+    container.innerHTML = renderLegalView(state.legalType);
   }
 }
 
@@ -1132,10 +1134,71 @@ function renderProfileView() {
           </div>
         </div>
 
-        <div class="settings-item" onclick="window.logout()" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-top: 12px;">
+        <div class="settings-item" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; margin-top: 20px;">
+          <div style="font-weight: bold; font-size: 14px;">⚖️ Rechtliches</div>
+          <div style="display: flex; gap: 12px; width: 100%;">
+            <button onclick="window.openLegal('impressum')" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--color-text-dim); font-size: 11px; cursor: pointer;">Impressum</button>
+            <button onclick="window.openLegal('privacy')" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: rgba(255,255,255,0.05); color: var(--color-text-dim); font-size: 11px; cursor: pointer;">Datenschutz</button>
+          </div>
+        </div>
+
+        <div class="settings-item" onclick="window.handleLogout()" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-top: 12px;">
           <span style="color: #ef4444;">Abmelden</span>
           <span style="color: #ef4444; opacity: 0.5;">➜</span>
         </div>
+      </div>
+    </div>
+  `;
+}
+
+window.openLegal = function(type) {
+  state.legalType = type;
+  state.currentView = 'legal';
+  renderApp();
+};
+
+function renderLegalView(type) {
+  const isImpressum = type === 'impressum';
+  
+  return `
+    <div class="legal-container" style="padding: 20px; text-align: left; line-height: 1.6;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+        <button onclick="window.switchView('profile')" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 12px; border-radius: 12px; cursor: pointer;">←</button>
+        <h2 style="margin: 0; font-size: 20px;">${isImpressum ? 'Impressum' : 'Datenschutz'}</h2>
+      </div>
+
+      <div style="background: var(--color-surface); padding: 20px; border-radius: 20px; border: 1px solid var(--glass-border); font-size: 13px; color: var(--color-text-dim);">
+        ${isImpressum ? `
+          <h3 style="color: white; margin-top: 0; font-size: 16px;">Angaben gemäß § 5 TMG</h3>
+          <p>[Dein Vorname Nachname]<br>
+          [Deine Straße Hausnummer]<br>
+          [PLZ Ort]</p>
+
+          <h3 style="color: white; font-size: 16px;">Kontakt</h3>
+          <p>Telefon: [Deine Telefonnummer]<br>
+          E-Mail: [Deine E-Mail-Adresse]</p>
+
+          <h3 style="color: white; font-size: 16px;">Verantwortlich für den Inhalt</h3>
+          <p>[Dein Vorname Nachname]<br>
+          [Deine Straße Hausnummer]<br>
+          [PLZ Ort]</p>
+        ` : `
+          <h3 style="color: white; margin-top: 0; font-size: 16px;">1. Datenschutz auf einen Blick</h3>
+          <p>Wir nehmen den Schutz Ihrer persönlichen Daten sehr ernst. Diese App speichert Daten (Fortschritt, Fotos, Stimmung) lokal auf Ihrem Gerät oder in Ihrem persönlichen Account.</p>
+          
+          <h3 style="color: white; font-size: 16px;">2. Datenerfassung</h3>
+          <p>Die Datenverarbeitung erfolgt durch den App-Betreiber. Ihre Daten werden zur Bereitstellung der Funktionen (Tracker, Analyse) genutzt.</p>
+          
+          <h3 style="color: white; font-size: 16px;">3. Ihre Rechte</h3>
+          <p>Sie haben jederzeit das Recht auf Auskunft, Berichtigung oder Löschung Ihrer Daten.</p>
+          
+          <h3 style="color: white; font-size: 16px;">4. Analyse-Tools</h3>
+          <p>Diese App nutzt lokale Algorithmen zur Analyse Ihrer Rückfälle. Es erfolgt keine Weitergabe an Dritte zu Werbezwecken.</p>
+        `}
+        
+        <p style="margin-top: 30px; font-style: italic; font-size: 11px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+          Hinweis: Dies ist eine Vorlage. Bitte ersetzen Sie die Platzhalter durch Ihre echten Daten.
+        </p>
       </div>
     </div>
   `;
