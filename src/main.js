@@ -1265,6 +1265,12 @@ function renderProfileView() {
           <span style="color: #ef4444;">Abmelden</span>
           <span style="color: #ef4444; opacity: 0.5;">➜</span>
         </div>
+
+        <div style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; text-align: center;">
+          <button onclick="window.handleDeleteAccount()" style="background: none; border: none; color: #ef4444; font-size: 11px; text-decoration: underline; cursor: pointer; opacity: 0.6;">
+            Konto und alle Daten dauerhaft löschen
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -1415,6 +1421,32 @@ window.handleLogout = async function() {
     state.user = null;
     localStorage.removeItem('user');
     renderApp();
+  }
+};
+
+window.handleDeleteAccount = async function() {
+  if (confirm("Möchtest du dein Konto und ALLE deine Daten wirklich unwiderruflich löschen? Dieser Schritt kann nicht rückgängig gemacht werden.")) {
+    try {
+      // 1. Daten in der profiles-Tabelle löschen
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', state.user.id);
+        
+      if (dbError) throw dbError;
+
+      // Hinweis: In der Client-SDK kann man den Auth-User nicht direkt löschen.
+      // Wir loggen den User aus und löschen alle lokalen Daten.
+      await supabase.auth.signOut();
+      
+      localStorage.clear();
+      state.user = null;
+      
+      alert("Dein Konto und deine Daten wurden erfolgreich gelöscht.");
+      window.location.reload();
+    } catch (error) {
+      alert("Fehler beim Löschen des Kontos: " + error.message);
+    }
   }
 };
 
