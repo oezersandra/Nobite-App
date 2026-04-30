@@ -29,7 +29,51 @@ let state = {
   isPremium: localStorage.getItem('isPremium') === 'true',
   theme: localStorage.getItem('theme') || 'default',
   activeAvatar: localStorage.getItem('activeAvatar') || 'plant',
-  userAvatar: localStorage.getItem('userAvatar') || '👤'
+  userAvatar: localStorage.getItem('userAvatar') || '👤',
+  showOnboarding: !localStorage.getItem('onboardingDone'),
+  onboardingStep: 0
+};
+
+const ONBOARDING_SLIDES = [
+  { 
+    title: "Willkommen bei Nobite", 
+    desc: "Der Weg zu gesunden Nägeln beginnt heute. Wir begleiten dich Schritt für Schritt auf deiner Reise.", 
+    icon: "✨",
+    color: "#10b981"
+  },
+  { 
+    title: "Dein Nail Pal", 
+    desc: "Du hast einen virtuellen Begleiter. Er wächst und gedeiht, wenn du nicht kaust. Pflege ihn gut!", 
+    icon: "🪴",
+    color: "#3b82f6"
+  },
+  { 
+    title: "Soforthilfe", 
+    desc: "Wenn der Drang kommt, klicke auf 'Ich habe Drang...'. Wir haben sofortige Übungen für dich bereit.", 
+    icon: "🆘",
+    color: "#ef4444"
+  },
+  { 
+    title: "KI-Analyse", 
+    desc: "Verstehe deine Muster. Wir zeigen dir (als Premium-Nutzer), wann du am gefährdetsten bist.", 
+    icon: "🧠",
+    color: "#8b5cf6"
+  }
+];
+
+window.nextOnboarding = function() {
+  state.onboardingStep++;
+  if (state.onboardingStep >= ONBOARDING_SLIDES.length) {
+    state.showOnboarding = false;
+    localStorage.setItem('onboardingDone', 'true');
+  }
+  renderApp();
+};
+
+window.skipOnboarding = function() {
+  state.showOnboarding = false;
+  localStorage.setItem('onboardingDone', 'true');
+  renderApp();
 };
 
 // --- Supabase Backend Sync ---
@@ -151,6 +195,12 @@ function getPalState() {
 
 function renderApp() {
   const app = document.querySelector('#app');
+  
+  if (state.showOnboarding) {
+    app.innerHTML = renderOnboarding();
+    return;
+  }
+
   app.innerHTML = `
     <header class="header">
       <div class="logo">
@@ -226,6 +276,36 @@ function renderApp() {
   document.getElementById('lightboxNextBtn').addEventListener('click', nextPhoto);
 
   initSwipeGestures();
+}
+
+function renderOnboarding() {
+  const slide = ONBOARDING_SLIDES[state.onboardingStep];
+  const isLast = state.onboardingStep === ONBOARDING_SLIDES.length - 1;
+
+  return `
+    <div class="onboarding-view" style="background: var(--color-bg); height: 100vh; display: flex; flex-direction: column; padding: 40px 20px; text-align: center; justify-content: center; position: relative; overflow: hidden;">
+      <div style="position: absolute; top: -100px; left: -100px; width: 300px; height: 300px; background: ${slide.color}; filter: blur(120px); opacity: 0.2; border-radius: 50%;"></div>
+      
+      <div class="onboarding-content" style="z-index: 10; animation: slideIn 0.5s ease-out;">
+        <div style="font-size: 80px; margin-bottom: 30px;">${slide.icon}</div>
+        <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 16px; color: white;">${slide.title}</h1>
+        <p style="font-size: 16px; color: var(--color-text-dim); line-height: 1.6; max-width: 300px; margin: 0 auto 40px;">${slide.desc}</p>
+      </div>
+
+      <div class="onboarding-dots" style="display: flex; justify-content: center; gap: 8px; margin-bottom: 40px; z-index: 10;">
+        ${ONBOARDING_SLIDES.map((_, i) => `
+          <div style="width: ${i === state.onboardingStep ? '24px' : '8px'}; height: 8px; background: ${i === state.onboardingStep ? 'var(--color-primary)' : 'rgba(255,255,255,0.2)'}; border-radius: 4px; transition: 0.3s;"></div>
+        `).join('')}
+      </div>
+
+      <div style="z-index: 10; display: flex; flex-direction: column; gap: 12px;">
+        <button class="finish-btn" style="width: 100%; height: 56px; font-size: 18px;" onclick="window.nextOnboarding()">
+          ${isLast ? 'Jetzt starten' : 'Weiter'}
+        </button>
+        ${!isLast ? `<button style="background: none; border: none; color: var(--color-text-dim); padding: 10px; cursor: pointer;" onclick="window.skipOnboarding()">Überspringen</button>` : ''}
+      </div>
+    </div>
+  `;
 }
 
 function initSwipeGestures() {
