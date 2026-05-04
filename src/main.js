@@ -31,6 +31,7 @@ let state = {
   activeAvatar: localStorage.getItem('activeAvatar') || 'plant',
   userAvatar: localStorage.getItem('userAvatar') || '👤',
   moodHistory: JSON.parse(localStorage.getItem('moodHistory') || '[]'),
+  urgeLog: JSON.parse(localStorage.getItem('urgeLog') || '[]'),
   showOnboarding: !localStorage.getItem('onboardingDone'),
   onboardingStep: 0
 };
@@ -96,7 +97,8 @@ async function saveUserData() {
       user_avatar: state.userAvatar,
       target_reward: state.targetReward,
       target_days: state.targetDays,
-      last_bite: state.lastBite.toISOString()
+      last_bite: state.lastBite.toISOString(),
+      urge_log: state.urgeLog
     });
 
   if (error) console.error('Fehler beim Speichern:', error);
@@ -126,12 +128,15 @@ async function loadUserData() {
     state.userAvatar = data.user_avatar || '👤';
     state.targetReward = data.target_reward;
     state.targetDays = data.target_days;
-    state.lastBite = new Date(data.last_bite);
+    state.last_bite = new Date(data.last_bite);
+    state.urgeLog = data.urge_log || [];
     
     // Update LocalStorage as backup
     localStorage.setItem('palDrops', state.palDrops);
     localStorage.setItem('palInventory', JSON.stringify(state.palInventory));
+    localStorage.setItem('urgeLog', JSON.stringify(state.urgeLog));
     localStorage.setItem('isPremium', state.isPremium);
+
     localStorage.setItem('theme', state.theme);
     
     applyTheme();
@@ -257,10 +262,31 @@ function renderApp() {
       <button class="lightbox-nav prev" id="lightboxPrevBtn">&#10094;</button>
       <button class="lightbox-nav next" id="lightboxNextBtn">&#10095;</button>
       <div class="lightbox-content" id="lightboxContent">
-        <!-- Image and info injected here -->
+      </div>
+    </div>
+
+    <!-- Comparison Modal -->
+    <div class="comparison-overlay" id="comparisonModal">
+      <div class="comparison-card" id="comparisonCard">
+        <div class="comparison-header">
+          <div class="comparison-title">Mein Fortschritt</div>
+          <div class="comparison-subtitle" id="comparisonSubtitle">Tag 0 bis Tag X</div>
+        </div>
+        <div class="comparison-images" id="comparisonImages">
+          <!-- Images injected here -->
+        </div>
+        <div style="display: flex; gap: 12px; margin-top: 20px;">
+          <button class="share-btn-large" onclick="window.shareComparison()" style="flex: 2;">
+            ✨ Teilen
+          </button>
+          <button class="finish-btn" onclick="document.getElementById('comparisonModal').classList.remove('active')" style="flex: 1;">
+            Schließen
+          </button>
+        </div>
       </div>
     </div>
   `;
+
 
   renderContent();
   
@@ -399,18 +425,36 @@ function renderContent() {
             <h3 class="modal-title">Wie hast du dich gefühlt?</h3>
           </div>
           <p style="font-size: 14px; color: var(--color-text-dim); margin-bottom: 20px;">Stress ist oft ein Auslöser. Dein ehrliches Feedback hilft der Analyse.</p>
-          <div class="mood-selector" style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 24px;">
-            <button class="mood-btn" onclick="handleRelapse(1)">😌<br><span style="font-size: 10px;">Ruhig</span></button>
-            <button class="mood-btn" onclick="handleRelapse(2)">😐<br><span style="font-size: 10px;">Ok</span></button>
-            <button class="mood-btn" onclick="handleRelapse(3)">😟<br><span style="font-size: 10px;">Angst</span></button>
-            <button class="mood-btn" onclick="handleRelapse(4)">😫<br><span style="font-size: 10px;">Stress</span></button>
-            <button class="mood-btn" onclick="handleRelapse(5)">😡<br><span style="font-size: 10px;">Wut</span></button>
+          <div class="mood-selector" style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 24px;">
+            <button class="mood-btn" onclick="window.selectRelapseMood(1, this)">😌<br><span style="font-size: 10px;">Ruhig</span></button>
+            <button class="mood-btn" onclick="window.selectRelapseMood(2, this)">😐<br><span style="font-size: 10px;">Ok</span></button>
+            <button class="mood-btn" onclick="window.selectRelapseMood(3, this)">😟<br><span style="font-size: 10px;">Angst</span></button>
+            <button class="mood-btn" onclick="window.selectRelapseMood(4, this)">😫<br><span style="font-size: 10px;">Stress</span></button>
+            <button class="mood-btn" onclick="window.selectRelapseMood(5, this)">😡<br><span style="font-size: 10px;">Wut</span></button>
           </div>
+
+          <p style="font-size: 14px; font-weight: bold; margin-bottom: 12px;">Was war der Auslöser? (Trigger)</p>
+          <div class="trigger-checkboxes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px;">
+            ${['😴 Langeweile', '😫 Stress', '🚗 Autofahren', '📺 Fernsehen', '💻 Arbeit/Lernen', '🍔 Nach dem Essen', '❓ Sonstiges'].map(t => `
+              <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; font-size: 12px; cursor: pointer;">
+                <input type="checkbox" name="relapseTrigger" value="${t}" style="accent-color: var(--color-primary);">
+                ${t}
+              </label>
+            `).join('')}
+          </div>
+
+          <button class="urge-btn" style="width: 100%; justify-content: center; margin-bottom: 12px;" onclick="window.submitRelapse()">Rückfall bestätigen</button>
+
           <button class="close-btn" style="position: static; width: 100%; font-size: 14px;" onclick="document.getElementById('moodModal').classList.remove('active')">Abbrechen</button>
         </div>
       </div>
     `;
     document.querySelector('#urgeBtn').addEventListener('click', () => {
+      // Log the urge
+      state.urgeLog.push({ timestamp: new Date().toISOString() });
+      localStorage.setItem('urgeLog', JSON.stringify(state.urgeLog));
+      saveUserData();
+
       showRandomUrgeMethod();
       document.getElementById('urgeModal').classList.add('active');
     });
@@ -419,9 +463,17 @@ function renderContent() {
       <div class="gallery">
         <div class="gallery-header">
           <h2 class="gallery-title">Foto-Tagebuch</h2>
-          <label class="add-photo-label" for="photoInput">+</label>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            ${state.photos.length >= 2 ? `
+              <button onclick="window.showComparison()" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: white; padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                ✨ Vergleich
+              </button>
+            ` : ''}
+            <label class="add-photo-label" for="photoInput">+</label>
+          </div>
           <input type="file" id="photoInput" accept="image/*" capture="camera">
         </div>
+
         
         <div class="photo-grid" id="photoGrid">
           ${state.photos.length === 0 ? '<div class="empty-state">Noch keine Fotos. Fang heute an!</div>' : ''}
@@ -626,32 +678,75 @@ window.equipItem = function(id) {
 
 /* --- Trigger Analysis & Notifications --- */
 function analyzeTriggers() {
-  if (state.relapseLog.length === 0) return null;
+  if (state.relapseLog.length === 0 && state.urgeLog.length === 0) return null;
   
   const hourCounts = Array(24).fill(0);
+  const urgeHourCounts = Array(24).fill(0);
+
   state.relapseLog.forEach(log => {
     const hour = new Date(log.timestamp).getHours();
     hourCounts[hour]++;
   });
+
+  state.urgeLog.forEach(log => {
+    const hour = new Date(log.timestamp).getHours();
+    urgeHourCounts[hour]++;
+  });
   
-  let maxHour = 0;
-  let maxCount = 0;
+  let maxRelapseHour = 0;
+  let maxRelapseCount = 0;
+  let maxUrgeHour = 0;
+  let maxUrgeCount = 0;
+
   for (let h = 0; h < 24; h++) {
-    if (hourCounts[h] > maxCount) {
-      maxCount = hourCounts[h];
-      maxHour = h;
+    if (hourCounts[h] > maxRelapseCount) {
+      maxRelapseCount = hourCounts[h];
+      maxRelapseHour = h;
+    }
+    if (urgeHourCounts[h] > maxUrgeCount) {
+      maxUrgeCount = urgeHourCounts[h];
+      maxUrgeHour = h;
     }
   }
   
-  let timeLabel = "";
-  if (maxHour >= 5 && maxHour < 12) timeLabel = "Vormittag";
-  else if (maxHour >= 12 && maxHour < 14) timeLabel = "Mittag";
-  else if (maxHour >= 14 && maxHour < 18) timeLabel = "Nachmittag";
-  else if (maxHour >= 18 && maxHour < 22) timeLabel = "Abend";
-  else timeLabel = "Nacht";
+  const getTimeLabel = (hour) => {
+    if (hour >= 5 && hour < 12) return "Vormittag";
+    if (hour >= 12 && hour < 14) return "Mittag";
+    if (hour >= 14 && hour < 18) return "Nachmittag";
+    if (hour >= 18 && hour < 22) return "Abend";
+    return "Nacht";
+  };
   
-  return { label: timeLabel, hour: maxHour, count: maxCount };
+  return { 
+    relapse: { hour: maxRelapseHour, count: maxRelapseCount, label: getTimeLabel(maxRelapseHour) },
+    urge: { hour: maxUrgeHour, count: maxUrgeCount, label: getTimeLabel(maxUrgeHour) },
+    topTrigger: getTopTrigger()
+  };
 }
+
+function getTopTrigger() {
+  if (state.relapseLog.length === 0) return null;
+  const triggerCounts = {};
+  state.relapseLog.forEach(log => {
+    if (log.triggers && Array.isArray(log.triggers)) {
+      log.triggers.forEach(t => {
+        triggerCounts[t] = (triggerCounts[t] || 0) + 1;
+      });
+    }
+  });
+  
+  let top = null;
+  let max = 0;
+  for (const t in triggerCounts) {
+    if (triggerCounts[t] > max) {
+      max = triggerCounts[t];
+      top = t;
+    }
+  }
+  return top;
+}
+
+
 
 function renderMoodTracker() {
   const today = new Date().toLocaleDateString();
@@ -724,36 +819,51 @@ function renderMoodChart() {
 function renderTriggerCard() {
   const analysis = analyzeTriggers();
   
-  if (!analysis || analysis.count < 1) {
+  if (!analysis || (analysis.relapse.count === 0 && analysis.urge.count === 0)) {
     return `
       <div class="goal-card trigger-card" style="opacity: 0.8; border: 1px dashed var(--glass-border);">
         <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--color-primary); font-weight: bold; margin-bottom: 8px;">
           KI-Analyse (Premium)
         </div>
         <div style="font-size: 14px; color: var(--color-text-dim); text-align: center; padding: 10px 0;">
-          Noch nicht genügend Daten für eine Analyse. 📊 Tracke deine Rückfälle, um Muster zu erkennen.
+          Noch nicht genügend Daten für eine Analyse. 📊 Nutze den "Ich habe Drang"-Button, um Muster zu erkennen.
         </div>
       </div>
     `;
   }
   
-  const avgMood = state.relapseLog.reduce((acc, log) => acc + (log.mood || 3), 0) / state.relapseLog.length;
-  const moodTexts = ["Ruhig", "Entspannt", "Neutral", "Angespannt", "Sehr gestresst"];
-  const moodDesc = moodTexts[Math.round(avgMood) - 1] || "Neutral";
+  const hasUrgeData = analysis.urge.count > 0;
+  const hasRelapseData = analysis.relapse.count > 0;
 
   return `
     <div class="goal-card trigger-card">
-      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--color-primary); font-weight: bold; margin-bottom: 8px;">
+      <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--color-primary); font-weight: bold; margin-bottom: 12px;">
         KI-Analyse (Premium)
       </div>
-      <div style="font-size: 14px; margin-bottom: 12px;">
-        Deine kritischste Zeit ist gegen <b>${analysis.hour}:00 Uhr</b>.
-      </div>
-      <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px;">
+      
+      ${hasUrgeData ? `
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 11px; color: var(--color-text-dim); margin-bottom: 4px;">Häufigster Drang (${analysis.urge.label})</div>
+          <div style="font-size: 16px; font-weight: bold; color: #fbbf24;">⚠️ gegen ${analysis.urge.hour}:00 Uhr</div>
+        </div>
+      ` : ''}
+
+      ${hasRelapseData ? `
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 11px; color: var(--color-text-dim); margin-bottom: 4px;">Kritischste Rückfallzeit (${analysis.relapse.label})</div>
+          <div style="font-size: 16px; font-weight: bold; color: #ef4444;">🚨 gegen ${analysis.relapse.hour}:00 Uhr</div>
+          ${analysis.topTrigger ? `
+            <div style="font-size: 11px; color: var(--color-text-dim); margin-top: 4px;">Hauptauslöser: <b>${analysis.topTrigger}</b></div>
+          ` : ''}
+        </div>
+      ` : ''}
+
+
+      <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
         <div style="font-size: 24px;">🧠</div>
         <div style="text-align: left;">
-          <div style="font-size: 11px; color: var(--color-text-dim);">Hauptauslöser (Stimmung)</div>
-          <div style="font-size: 14px; font-weight: bold;">${moodDesc}</div>
+          <div style="font-size: 11px; color: var(--color-text-dim);">Tipp vom Nail Pal</div>
+          <div style="font-size: 13px; font-style: italic;">"Sei heute besonders um ${hasUrgeData ? analysis.urge.hour : analysis.relapse.hour}:00 Uhr achtsam!"</div>
         </div>
       </div>
     </div>
@@ -761,12 +871,16 @@ function renderTriggerCard() {
 }
 
 window.resetTriggers = function() {
-  if (confirm("Möchtest du die Trigger-Analyse wirklich zurücksetzen? Deine bisherigen Rückfall-Daten werden gelöscht.")) {
+  if (confirm("Möchtest du die Trigger-Analyse wirklich zurücksetzen? Deine Daten werden gelöscht.")) {
     state.relapseLog = [];
+    state.urgeLog = [];
     localStorage.setItem('relapseLog', JSON.stringify([]));
+    localStorage.setItem('urgeLog', JSON.stringify([]));
+    saveUserData();
     renderApp();
   }
 };
+
 
 window.requestNotificationPermission = function() {
   if (!("Notification" in window)) {
@@ -890,6 +1004,16 @@ const URGE_METHODS = [
   { id: 'game', icon: '🎮', title: 'Mini-Ablenkung', desc: 'Zerplatze die Blasen auf dem Bildschirm! Beschäftige deine Hände.', action: 'Spiel starten' }
 ];
 
+const DISGUST_FACTS = [
+  { icon: '🦠', title: 'Bakterien-Zoo', text: 'Unter deinen Fingernägeln leben doppelt so viele Bakterien wie auf dem Rest deiner Hand – darunter oft E. coli und Salmonellen.' },
+  { icon: '👄', title: 'Warzen-Express', text: 'Durch Kauen verbreitest du HPV-Viren von deinen Fingern auf deine Lippen und dein Zahnfleisch.' },
+  { icon: '🐛', title: 'Madenwürmer', text: 'Fingernägel sind das perfekte Versteck für Parasiteneier (wie Madenwürmer), die du beim Kauen direkt verschluckst.' },
+  { icon: '🦷', title: 'Zahnschäden', text: 'Kauen verursacht winzige Risse im Zahnschmelz und kann deine Zähne mit der Zeit verschieben.' },
+  { icon: '⚠️', title: 'Eitrige Entzündungen', text: 'Winzige Wunden am Nagelbett sind Einfallstore für Bakterien, die schmerzhafte, eitrige Infektionen auslösen.' },
+  { icon: '🤢', title: 'Mundgeruch', text: 'Die Bakterien von deinen Fingern siedeln sich in deinem Mund an und können chronischen Mundgeruch verursachen.' }
+];
+
+
 const MOTIVATIONAL_QUOTES = [
   { icon: '🌟', quote: 'Großartig!', subtext: 'Jeder Moment ohne Kauen macht dich stärker.' },
   { icon: '💪', quote: 'Du schaffst das!', subtext: 'Deine Willenskraft wächst mit jedem Tag.' },
@@ -945,10 +1069,32 @@ function showRandomUrgeMethod() {
         <div class="method-title" style="font-size: 20px; margin-bottom: 8px;">${method.title}</div>
         <div class="method-desc" style="font-size: 14px; margin-bottom: 24px;">${method.desc}</div>
         <button class="urge-btn" style="width: 100%; justify-content: center;" onclick="startUrgeAction('${method.id}')">${method.action}</button>
+        <button class="schock-btn" style="width: 100%;" onclick="window.showDisgustFact()">
+          <span>⚠️</span> Schock-Therapie (Harte Tour)
+        </button>
       </div>
     </div>
+
   `;
 }
+
+window.showDisgustFact = function() {
+  const container = document.getElementById('randomMethodContainer');
+  document.getElementById('newRandomBtn').style.display = 'flex'; // Keep the random button to go back to methods
+  document.getElementById('newRandomBtn').innerText = 'Andere Hilfe suchen';
+
+  const fact = DISGUST_FACTS[Math.floor(Math.random() * DISGUST_FACTS.length)];
+  
+  container.innerHTML = `
+    <div class="disgust-card">
+      <div class="disgust-icon">${fact.icon}</div>
+      <div class="disgust-title">${fact.title}</div>
+      <div class="disgust-text">${fact.text}</div>
+      <button class="finish-btn" style="margin-top: 10px;" onclick="document.getElementById('urgeModal').classList.remove('active')">Drang ist weg!</button>
+    </div>
+  `;
+};
+
 
 /* --- Interactive Actions --- */
 function startBreathingExercise() {
@@ -1095,7 +1241,45 @@ function showWaterConfetti() {
   }
 }
 
+/* --- Comparison Logic --- */
+window.showComparison = function() {
+  if (state.photos.length < 2) return;
+  
+  const first = state.photos[0];
+  const last = state.photos[state.photos.length - 1];
+  const diffDays = last.day - first.day;
+  
+  document.getElementById('comparisonSubtitle').innerText = `Fortschritt über ${diffDays} Tage`;
+  
+  const container = document.getElementById('comparisonImages');
+  container.innerHTML = `
+    <div class="comparison-image-wrapper">
+      <img src="${first.url}">
+      <div class="comparison-tag">Vorher (Tag ${first.day})</div>
+    </div>
+    <div class="comparison-image-wrapper">
+      <img src="${last.url}">
+      <div class="comparison-tag">Nachher (Tag ${last.day})</div>
+    </div>
+  `;
+  
+  document.getElementById('comparisonModal').classList.add('active');
+};
+
+window.shareComparison = function() {
+  if (navigator.share) {
+    navigator.share({
+      title: 'Mein Nobite Fortschritt',
+      text: `Ich habe in ${state.photos[state.photos.length-1].day - state.photos[0].day} Tagen riesige Fortschritte gemacht! 🌿 #Nobite`,
+      url: window.location.href
+    }).catch(err => console.log('Error sharing', err));
+  } else {
+    alert("Mach einen Screenshot von deinem Vergleich, um ihn mit Freunden zu teilen! ✨");
+  }
+};
+
 function handlePhotoUpload(e) {
+
   const file = e.target.files[0];
   if (!file) return;
 
@@ -1188,21 +1372,34 @@ window.showMoodPicker = function() {
   document.getElementById('moodModal').classList.add('active');
 };
 
-window.handleRelapse = function(moodLevel) {
+let selectedRelapseMood = 3;
+window.selectRelapseMood = function(level, btn) {
+  selectedRelapseMood = level;
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+};
+
+window.submitRelapse = function() {
+  const triggers = Array.from(document.querySelectorAll('input[name="relapseTrigger"]:checked')).map(cb => cb.value);
+  handleRelapse(selectedRelapseMood, triggers);
+};
+
+window.handleRelapse = function(moodLevel, triggers = []) {
   document.getElementById('moodModal').classList.remove('active');
   
   state.streakDays = 0;
   state.streakHours = 0;
-  state.startTime = new Date().toISOString();
+  state.lastBite = new Date().toISOString();
   state.urgeCountSinceRelapse = 0;
   
   const relapse = {
     timestamp: new Date().toISOString(),
-    mood: moodLevel
+    mood: moodLevel,
+    triggers: triggers
   };
   state.relapseLog.push(relapse);
   
-  localStorage.setItem('startTime', state.startTime);
+  localStorage.setItem('lastBite', state.lastBite);
   localStorage.setItem('relapseLog', JSON.stringify(state.relapseLog));
   localStorage.setItem('urgeCountSinceRelapse', '0');
   
@@ -1211,6 +1408,7 @@ window.handleRelapse = function(moodLevel) {
   checkAchievements();
   renderApp();
 };
+
 
 
 
@@ -1404,6 +1602,14 @@ function renderProfileView() {
           </div>
         </div>
 
+        <div class="settings-item" onclick="window.rateApp()" style="padding: 16px; background: linear-gradient(135deg, rgba(251,191,36,0.08), rgba(251,191,36,0.03)); border: 1px solid rgba(251,191,36,0.15); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-top: 8px;">
+          <div>
+            <div style="font-weight: bold; font-size: 14px;">⭐ App bewerten</div>
+            <div style="font-size: 11px; color: var(--color-text-dim); margin-top: 2px;">Hilf uns zu wachsen!</div>
+          </div>
+          <span style="font-size: 20px;">🌟</span>
+        </div>
+
         <div class="settings-item" style="padding: 16px; background: var(--color-surface); border-radius: 16px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; margin-top: 20px;">
           <div style="font-weight: bold; font-size: 14px;">⚖️ Rechtliches</div>
           <div style="display: flex; gap: 12px; width: 100%;">
@@ -1431,6 +1637,26 @@ window.openLegal = function(type) {
   state.legalType = type;
   state.currentView = 'legal';
   renderApp();
+};
+
+window.rateApp = function() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
+
+  // Replace these with your real App Store / Play Store links once published!
+  const APP_STORE_URL = 'https://apps.apple.com/app/idYOUR_APP_ID'; // TODO: deine Apple ID einsetzen
+  const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=YOUR_PACKAGE_NAME'; // TODO: dein Package Name
+
+  if (isIOS) {
+    window.open(APP_STORE_URL, '_blank');
+  } else if (isAndroid) {
+    window.open(PLAY_STORE_URL, '_blank');
+  } else {
+    // Desktop / Browser: zeige beide Optionen
+    const choice = confirm('Möchtest du uns im App Store bewerten?\n\nOK = App Store (iOS)\nAbbrechen = Play Store (Android)');
+    window.open(choice ? APP_STORE_URL : PLAY_STORE_URL, '_blank');
+  }
 };
 
 function renderLegalView(type) {
