@@ -1,6 +1,11 @@
 import './style.css'
 import { supabase } from './supabase.js'
 
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+  alert('Fehler: ' + msg + '\nZeile: ' + lineNo);
+  return false;
+};
+
 // Register Service Worker for PWA/Push
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
@@ -906,7 +911,20 @@ window.requestNotificationPermission = function() {
       alert("Benachrichtigungen wurden nicht erlaubt.");
     }
   });
-};
+}
+
+// Debug connection
+async function testConnection() {
+  try {
+    const { data, error } = await supabase.from('goals').select('count', { count: 'exact', head: true });
+    if (error) throw error;
+    console.log("Supabase Verbindung steht! ✅");
+    // Optional: alert("Verbindung erfolgreich!"); 
+  } catch (err) {
+    console.error("Supabase Verbindungsfehler:", err.message);
+    alert("⚠️ Verbindung zu Supabase fehlgeschlagen: " + err.message + "\nBitte prüfe dein Internet und die Supabase-Keys.");
+  }
+}
 
 function renderInAppWarning() {
   const analysis = analyzeTriggers();
@@ -1595,7 +1613,7 @@ function renderProfileView() {
           <span style="opacity: 0.5;">➜</span>
         </div>
 
-        <div class="settings-item" onclick="window.testNotification()" style="padding: 16px; background: rgba(16, 185, 129, 0.05); border: 1px dashed var(--color-primary); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-top: 8px;">
+        <div id="testNotifyBtn" class="settings-item" onclick="window.testNotification()" style="padding: 16px; background: rgba(16, 185, 129, 0.05); border: 1px dashed var(--color-primary); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-top: 8px;">
           <div style="text-align: left;">
             <div style="font-weight: bold; font-size: 14px; color: var(--color-primary);">🧪 Test-Benachrichtigung</div>
             <div style="font-size: 10px; color: var(--color-text-dim);">Sofort prüfen, ob Push funktioniert</div>
@@ -1748,11 +1766,18 @@ window.showAuthForm = function(type) {
 };
 
 function renderLoginForm() {
+  setTimeout(() => {
+    const btn = document.getElementById('loginSubmitBtn');
+    if (btn) {
+      btn.onclick = () => window.handleLogin();
+    }
+  }, 100);
+
   return `
     <div class="auth-form" style="display: flex; flex-direction: column; gap: 12px;">
       <input type="email" id="loginEmail" placeholder="E-Mail" class="goal-input" style="width: 100%;">
       <input type="password" id="loginPass" placeholder="Passwort" class="goal-input" style="width: 100%;">
-      <button class="finish-btn" style="width: 100%; margin-top: 8px;" onclick="window.handleLogin()">Einloggen</button>
+      <button id="loginSubmitBtn" class="finish-btn" style="width: 100%; margin-top: 8px; position: relative; z-index: 999;">Einloggen</button>
     </div>
   `;
 }
