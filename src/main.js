@@ -894,26 +894,14 @@ window.requestNotificationPermission = function() {
   }
 
   if (Notification.permission === "granted") {
-    alert("Benachrichtigungen sind bereits aktiviert! Du wirst gewarnt, sobald eine kritische Phase bevorsteht.");
+    window.subscribeToPush();
     return;
   }
   
   Notification.requestPermission().then(permission => {
     if (permission === "granted") {
-      // Use Service Worker if available
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(registration => {
-          registration.showNotification("Nobite", {
-            body: "Super! Ich werde dich vor deinen kritischen Zeiten warnen.",
-            icon: "./icon.png"
-          });
-        });
-      } else {
-        new Notification("Nobite", {
-          body: "Super! Ich werde dich vor deinen kritischen Zeiten warnen.",
-          icon: "./icon.png"
-        });
-      }
+      window.subscribeToPush();
+      sendNotification("Nobite", "Super! Ich werde dich vor deinen kritischen Zeiten warnen.");
     } else {
       alert("Benachrichtigungen wurden nicht erlaubt.");
     }
@@ -1994,17 +1982,23 @@ window.testNotification = function() {
 };
 
 window.subscribeToPush = async function() {
-  if (!('serviceWorker' in navigator)) return;
-  
-  const registration = await navigator.serviceWorker.ready;
-  // Note: Replace with your actual VAPID public key if setting up a backend
-  const VAPID_PUBLIC_KEY = 'BPE9_Your_VAPID_Public_Key_Placeholder'; 
+  if (!('serviceWorker' in navigator)) {
+    console.error('Service Worker nicht unterstützt');
+    return;
+  }
   
   try {
+    const registration = await navigator.serviceWorker.ready;
+    
+    // Echter VAPID Public Key für Apple/Google
+    const VAPID_PUBLIC_KEY = 'BFtg423bs2IH-MAqzS42AAndmvqqkJL31kgPSP2-yqQdkLCmgzhwN0NgpaKXwnoTTiLXVqySXJ3W13Fpc461MiI'; 
+    
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: VAPID_PUBLIC_KEY
     });
+
+    console.log('Push-Abo erfolgreich:', subscription);
 
     if (state.user) {
       const { error } = await supabase
@@ -2013,9 +2007,19 @@ window.subscribeToPush = async function() {
           user_id: state.user.id,
           subscription: subscription
         });
-      if (error) console.error('Fehler beim Speichern der Subscription:', error);
+      if (error) {
+        console.error('Fehler beim Speichern in Supabase:', error);
+        alert("Fehler beim Speichern der Benachrichtigungs-Daten.");
+      } else {
+        alert("Super! Benachrichtigungen sind jetzt für dieses Gerät aktiv. ✅");
+      }
     }
   } catch (err) {
     console.error('Push-Abo fehlgeschlagen:', err);
+    if (Notification.permission === 'denied') {
+      alert("Benachrichtigungen wurden blockiert. Bitte aktiviere sie in den iPhone-Einstellungen für diese App.");
+    } else {
+      alert("Technischer Fehler beim Aktivieren: " + err.message);
+    }
   }
 };
