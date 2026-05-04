@@ -944,31 +944,56 @@ function renderInAppWarning() {
   return "";
 }
 
+function sendNotification(title, body) {
+  if (Notification.permission !== "granted") return;
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.showNotification(title, {
+        body: body,
+        icon: "./icon.png",
+        badge: "./icon.png",
+        vibrate: [100, 50, 100]
+      });
+    });
+  } else {
+    new Notification(title, { body, icon: "./icon.png" });
+  }
+}
+
 function checkTriggerNotifications() {
-  const analysis = analyzeTriggers();
-  if (!analysis || Notification.permission !== "granted") return;
-  
-  const currentHour = new Date().getHours();
-  // Notify 1 hour before the critical hour
-  if (currentHour === (analysis.hour - 1)) {
-    const lastNotified = localStorage.getItem('lastTriggerNotify');
-    const today = new Date().toLocaleDateString();
-    
-    if (lastNotified !== today) {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(registration => {
-          registration.showNotification("Achtung: Gefahrenzeit!", {
-            body: `Deine kritische Zeit (${analysis.label}) beginnt bald. Sei wachsam! 🧘`,
-            icon: "./icon.png"
-          });
-        });
-      } else {
-        new Notification("Achtung: Gefahrenzeit!", {
-          body: `Deine kritische Zeit (${analysis.label}) beginnt bald. Sei wachsam! 🧘`,
-          icon: "./icon.png"
-        });
+  if (Notification.permission !== "granted") return;
+
+  const now = new Date();
+  const currentHour = now.getHours();
+  const today = now.toLocaleDateString();
+
+  if (state.isPremium) {
+    // Premium Logic: Multiple times a day based on analysis
+    const analysis = analyzeTriggers();
+    if (!analysis) return;
+
+    // Check both urge and relapse hours
+    const criticalHours = new Set();
+    if (analysis.urge.count > 0) criticalHours.add(analysis.urge.hour);
+    if (analysis.relapse.count > 0) criticalHours.add(analysis.relapse.hour);
+
+    criticalHours.forEach(h => {
+      // Notify 30-60 mins before each critical hour
+      if (currentHour === (h - 1) || (h === 0 && currentHour === 23)) {
+        const notifiedKey = `notified_${today}_${h}`;
+        if (!localStorage.getItem(notifiedKey)) {
+          sendNotification("Nobite Achtung!", `Deine kritische Phase (${h}:00 Uhr) naht. Bleib stark! 🧘`);
+          localStorage.setItem(notifiedKey, 'true');
+        }
       }
-      localStorage.setItem('lastTriggerNotify', today);
+    });
+  } else {
+    // Non-Premium Logic: 1x daily (e.g., at 10 AM)
+    const lastDaily = localStorage.getItem('lastDailyNotify');
+    if (currentHour === 10 && lastDaily !== today) {
+      sendNotification("Guten Morgen! ✨", "Ein neuer Tag ohne Kauen. Dein Nail Pal glaubt an dich!");
+      localStorage.setItem('lastDailyNotify', today);
     }
   }
 }
@@ -1582,6 +1607,14 @@ function renderProfileView() {
           <span style="opacity: 0.5;">➜</span>
         </div>
 
+        <div class="settings-item" onclick="window.testNotification()" style="padding: 16px; background: rgba(16, 185, 129, 0.05); border: 1px dashed var(--color-primary); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-top: 8px;">
+          <div style="text-align: left;">
+            <div style="font-weight: bold; font-size: 14px; color: var(--color-primary);">🧪 Test-Benachrichtigung</div>
+            <div style="font-size: 10px; color: var(--color-text-dim);">Sofort prüfen, ob Push funktioniert</div>
+          </div>
+          <span style="font-size: 18px;">📲</span>
+        </div>
+
         <div class="leaderboard-section" style="margin-top: 20px; text-align: left;">
           <h3 style="font-size: 16px; margin-bottom: 12px;">🌍 Community Leaderboard</h3>
           <div style="background: var(--color-surface); border-radius: 20px; overflow: hidden; border: 1px solid var(--glass-border);">
@@ -1952,15 +1985,37 @@ function renderLightboxContent() {
   `;
 }
 
-// Update streak every minute
-setInterval(() => {
-  if (state.currentView === 'dashboard' || state.currentView === 'nailpal') {
-    calculateStreak();
-    if (state.currentView === 'dashboard') {
-      const streakDisplay = document.querySelector('.streak-value');
-      if (streakDisplay) {
-        streakDisplay.innerText = `${state.streakDays} Tage, ${state.streakHours} Std.`;
-      }
-    }
+window.testNotification = function() {
+  if (Notification.permission !== "granted") {
+    alert("Bitte aktiviere zuerst die Benachrichtigungen.");
+    return;
   }
-}, 60000);
+  sendNotification("Test Bestanden! ✅", "Deine Nobite-Benachrichtigungen funktionieren einwandfrei.");
+};
+
+window.subscribeToPush = async function() {
+  if (!('serviceWorker' in navigator)) return;
+  
+  const registration = await navigator.serviceWorker.ready;
+  // Note: Replace with your actual VAPID public key if setting up a backend
+  const VAPID_PUBLIC_KEY = 'BPE9_Your_VAPID_Public_Key_Placeholder'; 
+  
+  try {
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: VAPID_PUBLIC_KEY
+    });
+
+    if (state.user) {
+      const { error } = await supabase
+        .from('push_subscriptions')
+        .upsert({
+          user_id: state.user.id,
+          subscription: subscription
+        });
+      if (error) console.error('Fehler beim Speichern der Subscription:', error);
+    }
+  } catch (err) {
+    console.error('Push-Abo fehlgeschlagen:', err);
+  }
+};
