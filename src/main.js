@@ -888,7 +888,7 @@ window.resetTriggers = function() {
 
 
 window.requestNotificationPermission = function() {
-  if (!("Notification" in window)) {
+  if (!window.Notification) {
     alert("Dein Browser unterstützt leider keine Benachrichtigungen. (Auf dem iPhone musst du die App zum Homescreen hinzufügen)");
     return;
   }
@@ -951,7 +951,7 @@ function renderInAppWarning() {
 }
 
 function sendNotification(title, body) {
-  if (Notification.permission !== "granted") return;
+  if (!window.Notification || Notification.permission !== "granted") return;
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(registration => {
@@ -968,7 +968,7 @@ function sendNotification(title, body) {
 }
 
 function checkTriggerNotifications() {
-  if (Notification.permission !== "granted") return;
+  if (!window.Notification || Notification.permission !== "granted") return;
 
   const now = new Date();
   const currentHour = now.getHours();
@@ -1999,7 +1999,7 @@ function renderLightboxContent() {
 }
 
 window.testNotification = function() {
-  if (Notification.permission !== "granted") {
+  if (!window.Notification || Notification.permission !== "granted") {
     alert("Bitte aktiviere zuerst die Benachrichtigungen.");
     return;
   }
@@ -2041,7 +2041,7 @@ window.subscribeToPush = async function() {
     }
   } catch (err) {
     console.error('Push-Abo fehlgeschlagen:', err);
-    if (Notification.permission === 'denied') {
+    if (window.Notification && Notification.permission === 'denied') {
       alert("Benachrichtigungen wurden blockiert. Bitte aktiviere sie in den iPhone-Einstellungen für diese App.");
     } else {
       alert("Technischer Fehler beim Aktivieren: " + err.message);
