@@ -51,5 +51,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Wir benötigen Zugriff auf deine Kamera, um Fortschrittsfotos deiner Nägel zu machen.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Wir benötigen Zugriff auf deine Fotos, um sie im Tagebuch zu speichern.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Wir benötigen Zugriff auf deine Fotos, um sie im Tagebuch zu speichern.</string>
 </dict>
 </plist>

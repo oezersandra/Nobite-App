@@ -1,6 +1,7 @@
 import './style.css'
 import { supabase } from './supabase.js'
 import { LocalNotifications } from '@capacitor/local-notifications'
+import { Camera, CameraResultType } from '@capacitor/camera'
 
 window.onerror = function(msg, url, lineNo, columnNo, error) {
   alert('Fehler: ' + msg + '\nZeile: ' + lineNo);
@@ -475,9 +476,9 @@ function renderContent() {
                 ✨ Vergleich
               </button>
             ` : ''}
-            <label class="add-photo-label" for="photoInput">+</label>
+            <div class="add-photo-label" onclick="window.takeNativePhoto()" style="cursor: pointer;">+</div>
           </div>
-          <input type="file" id="photoInput" accept="image/*" capture="camera">
+          <input type="file" id="photoInput" accept="image/*" capture="camera" style="display: none;">
         </div>
 
         
@@ -1993,6 +1994,35 @@ function showConfetti() {
 }
 
 /* --- Lightbox Logic --- */
+window.takeNativePhoto = async function() {
+  const isNative = window.Capacitor && window.Capacitor.isNativePlatform();
+  
+  if (isNative) {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: true,
+        resultType: CameraResultType.DataUrl
+      });
+
+      const photo = {
+        id: Date.now(),
+        url: image.dataUrl,
+        date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        time: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      state.photos.unshift(photo);
+      localStorage.setItem('photos', JSON.stringify(state.photos));
+      renderApp();
+    } catch (err) {
+      console.error('Kamera-Fehler:', err);
+    }
+  } else {
+    document.getElementById('photoInput').click();
+  }
+};
+
 window.openLightbox = function(index) {
   state.activePhotoIndex = index;
   renderLightboxContent();
