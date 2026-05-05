@@ -1,5 +1,6 @@
 import './style.css'
 import { supabase } from './supabase.js'
+import { LocalNotifications } from '@capacitor/local-notifications'
 
 window.onerror = function(msg, url, lineNo, columnNo, error) {
   alert('Fehler: ' + msg + '\nZeile: ' + lineNo);
@@ -887,7 +888,26 @@ window.resetTriggers = function() {
 };
 
 
-window.requestNotificationPermission = function() {
+window.requestNotificationPermission = async function() {
+  // Check if we are running in a native environment
+  const isNative = window.Capacitor && window.Capacitor.isNativePlatform();
+
+  if (isNative) {
+    const permission = await LocalNotifications.requestPermissions();
+    if (permission.display === 'granted') {
+      window.subscribeToPush();
+      sendNotification("Nobite", "Super! Ich werde dich vor deinen kritischen Zeiten warnen.");
+      const testBtn = document.getElementById('testNotifyBtn');
+      if (testBtn) {
+        testBtn.disabled = false;
+        testBtn.style.opacity = "1";
+      }
+    } else {
+      alert("Benachrichtigungen wurden nicht erlaubt.");
+    }
+    return;
+  }
+
   if (!window.Notification) {
     alert("Dein Browser unterstützt leider keine Benachrichtigungen. (Auf dem iPhone musst du die App zum Homescreen hinzufügen)");
     return;
@@ -950,7 +970,27 @@ function renderInAppWarning() {
   return "";
 }
 
-function sendNotification(title, body) {
+async function sendNotification(title, body) {
+  const isNative = window.Capacitor && window.Capacitor.isNativePlatform();
+
+  if (isNative) {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          title,
+          body,
+          id: Math.floor(Math.random() * 10000),
+          schedule: { at: new Date(Date.now() + 1000) },
+          sound: null,
+          attachments: null,
+          actionTypeId: "",
+          extra: null
+        }
+      ]
+    });
+    return;
+  }
+
   if (!window.Notification || Notification.permission !== "granted") return;
 
   if ('serviceWorker' in navigator) {
